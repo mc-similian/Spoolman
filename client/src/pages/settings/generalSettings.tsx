@@ -1,8 +1,9 @@
 import { useTranslate } from "@refinedev/core";
-import { Alert, Button, Checkbox, Divider, Form, Input, message, Radio, Select, Typography } from "antd";
+import { Alert, Button, Checkbox, Divider, Form, Input, InputNumber, message, Radio, Select, Typography } from "antd";
 import { useEffect } from "react";
 import { useGetSettings, useSetSetting } from "../../utils/querySettings";
 import { useGetPrinters } from "../../utils/queryPrinter";
+import { useGetPrintSettings as useGetPrintPresets } from "../printing/printing";
 
 export function GeneralSettings() {
   const settings = useGetSettings();
@@ -12,11 +13,15 @@ export function GeneralSettings() {
   const setPrintMode = useSetSetting("print_mode");
   const setHostPrinterName = useSetSetting("host_printer_name");
   const setHostPrinterOptions = useSetSetting("host_printer_options");
+  const setAutoPrintEnabled = useSetSetting("auto_print_enabled");
+  const setAutoPrintPresetId = useSetSetting("auto_print_preset_id");
+  const setAutoPrintCopies = useSetSetting("auto_print_copies");
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
   const t = useTranslate();
 
   const printersQuery = useGetPrinters();
+  const printPresets = useGetPrintPresets();
   const printMode = settings.data ? JSON.parse(settings.data.print_mode?.value ?? '"browser"') : "browser";
 
   // Set initial form values
@@ -33,6 +38,9 @@ export function GeneralSettings() {
           null,
           2
         ),
+        auto_print_enabled: JSON.parse(settings.data.auto_print_enabled?.value ?? 'false'),
+        auto_print_preset_id: JSON.parse(settings.data.auto_print_preset_id?.value ?? '""'),
+        auto_print_copies: JSON.parse(settings.data.auto_print_copies?.value ?? '1'),
       });
     }
   }, [settings.data, form]);
@@ -52,6 +60,9 @@ export function GeneralSettings() {
     print_mode: string;
     host_printer_name: string;
     host_printer_options: string;
+    auto_print_enabled: boolean;
+    auto_print_preset_id: string;
+    auto_print_copies: number;
   }) => {
     // Check if the currency has changed
     if (settings.data?.currency.value !== JSON.stringify(values.currency)) {
@@ -88,6 +99,17 @@ export function GeneralSettings() {
         messageApi.error(t("settings.general.printer_options.invalidJson"));
       }
     }
+
+    // Auto-print settings
+    if (settings.data?.auto_print_enabled?.value !== JSON.stringify(values.auto_print_enabled ?? false)) {
+      setAutoPrintEnabled.mutate(values.auto_print_enabled ?? false);
+    }
+    if (settings.data?.auto_print_preset_id?.value !== JSON.stringify(values.auto_print_preset_id ?? "")) {
+      setAutoPrintPresetId.mutate(values.auto_print_preset_id ?? "");
+    }
+    if (settings.data?.auto_print_copies?.value !== JSON.stringify(values.auto_print_copies ?? 1)) {
+      setAutoPrintCopies.mutate(values.auto_print_copies ?? 1);
+    }
   };
 
   return (
@@ -103,6 +125,9 @@ export function GeneralSettings() {
           print_mode: "browser",
           host_printer_name: "",
           host_printer_options: "{}",
+          auto_print_enabled: false,
+          auto_print_preset_id: "",
+          auto_print_copies: 1,
         }}
         onFinish={onFinish}
         style={{
@@ -217,6 +242,51 @@ export function GeneralSettings() {
                 rows={3}
                 placeholder='{"media": "Custom.62x29mm", "fit-to-page": ""}'
               />
+            </Form.Item>
+
+            <Divider>{t("settings.general.auto_print.title")}</Divider>
+
+            <Form.Item
+              label={t("settings.general.auto_print.enabled.label")}
+              tooltip={t("settings.general.auto_print.enabled.tooltip")}
+              name="auto_print_enabled"
+              valuePropName="checked"
+            >
+              <Checkbox />
+            </Form.Item>
+
+            <Form.Item
+              label={t("settings.general.auto_print.preset.label")}
+              tooltip={t("settings.general.auto_print.preset.tooltip")}
+              name="auto_print_preset_id"
+            >
+              <Select
+                allowClear
+                placeholder={t("settings.general.auto_print.preset.placeholder")}
+              >
+                {printPresets && printPresets.length > 0 ? (
+                  printPresets.map((preset) => (
+                    <Select.Option
+                      key={preset.labelSettings.printSettings.id}
+                      value={preset.labelSettings.printSettings.id}
+                    >
+                      {preset.labelSettings.printSettings?.name || preset.labelSettings.printSettings.id}
+                    </Select.Option>
+                  ))
+                ) : (
+                  <Select.Option disabled value="">
+                    {t("settings.general.auto_print.preset.no_presets")}
+                  </Select.Option>
+                )}
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              label={t("settings.general.auto_print.copies.label")}
+              tooltip={t("settings.general.auto_print.copies.tooltip")}
+              name="auto_print_copies"
+            >
+              <InputNumber min={1} max={10} />
             </Form.Item>
           </>
         )}

@@ -348,7 +348,27 @@
                 "tooltip": "JSON object of CUPS print options. Common options: media (e.g. \"Custom.62x29mm\"), fit-to-page, orientation-requested (3=portrait, 4=landscape).",
                 "invalidJson": "Invalid JSON format"
             },
-            "cups_not_available": "CUPS is not available on the server. Ensure cups-client is installed in the container and CUPS_SERVER environment variable points to your CUPS server."
+            "cups_not_available": "CUPS is not available on the server. Ensure cups-client is installed in the container and CUPS_SERVER environment variable points to your CUPS server.",
+            "auto_print": {
+                "title": "Auto-Print",
+                "enabled": {
+                    "label": "Auto-Print on Spool Creation",
+                    "tooltip": "Automatically print a label when a new spool is created. Requires host printing mode and a configured printer."
+                },
+                "preset": {
+                    "label": "Label Preset",
+                    "tooltip": "Select the print preset to use for automatic label printing.",
+                    "placeholder": "Select a preset",
+                    "no_presets": "No presets configured. Create a preset in the print dialog first."
+                },
+                "copies": {
+                    "label": "Copies",
+                    "tooltip": "Number of copies to print for each new spool."
+                },
+                "printing": "Printing label...",
+                "success": "Label printed successfully",
+                "error": "Failed to print label"
+            }
         },
         "extra_fields": {
             "tab": "Extra Fields",
