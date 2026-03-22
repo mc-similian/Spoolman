@@ -21,7 +21,7 @@ def mm_to_px(mm: float) -> int:
     return round(mm * PX_PER_MM)
 
 
-def _substitute_template(template: str, spool_data: dict) -> str:
+def _substitute_template(template: str, spool_data: dict) -> str:  # noqa: C901
     """Apply the same template substitution logic as the frontend.
 
     Supports:
@@ -40,6 +40,9 @@ def _substitute_template(template: str, spool_data: dict) -> str:
                 return None
             if current is None:
                 return None
+        # Treat boolean False and empty strings as missing values
+        if current is False or current == "":
+            return None
         return str(current)
 
     # First handle conditional tags: {prefix {tag} suffix}
