@@ -384,6 +384,27 @@ class BackupResponse(BaseModel):
     )
 
 
+class PrinterStatusResponse(BaseModel):
+    cups_available: bool = Field(description="Whether CUPS is available on the host.")
+
+
+class PrinterInfo(BaseModel):
+    name: str = Field(description="CUPS printer name.")
+    description: str = Field(default="", description="Printer description.")
+    is_default: bool = Field(default=False, description="Whether this is the system default printer.")
+    status: str = Field(default="unknown", description="Printer status (idle, printing, disabled).")
+
+
+class PrinterListResponse(BaseModel):
+    cups_available: bool = Field(description="Whether CUPS is available on the host.")
+    printers: list[PrinterInfo] = Field(default_factory=list, description="Available CUPS printers.")
+
+
+class PrintJobResponse(BaseModel):
+    job_id: str = Field(description="CUPS job ID.")
+    status: str = Field(description="Job submission status.")
+
+
 class EventType(str, Enum):
     """Event types."""
 

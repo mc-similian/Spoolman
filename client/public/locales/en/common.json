@@ -100,7 +100,12 @@
             "deleteSettingsConfirm": "Are you sure you want to delete this preset?",
             "settingsName": "Preset Name",
             "saveSetting": "Save Presets",
-            "saveAsImage": "Save as Image"
+            "saveAsImage": "Save as Image",
+            "printToHost": "Print to Host",
+            "sendingToHost": "Sending to host printer...",
+            "hostPrintSuccess": "Print job sent successfully!",
+            "hostPrintError": "Host print failed",
+            "noPages": "No pages to print"
         },
         "qrcode": {
             "button": "Print Labels",
@@ -322,7 +327,28 @@
             "round_prices": {
                 "label": "Round prices",
                 "tooltip": "Round prices to the nearest whole number."
-            }
+            },
+            "printing": {
+                "title": "Printing"
+            },
+            "print_mode": {
+                "label": "Print Mode",
+                "tooltip": "Choose whether to print via the browser's print dialog or via a printer connected to the Spoolman host.",
+                "browser": "Browser",
+                "host": "Host Printer"
+            },
+            "host_printer": {
+                "label": "Host Printer",
+                "tooltip": "Select the CUPS printer to use for host printing. Leave empty to use the system default.",
+                "placeholder": "System default",
+                "default": "default"
+            },
+            "printer_options": {
+                "label": "Printer Options",
+                "tooltip": "JSON object of CUPS print options. Common options: media (e.g. \"Custom.62x29mm\"), fit-to-page, orientation-requested (3=portrait, 4=landscape).",
+                "invalidJson": "Invalid JSON format"
+            },
+            "cups_not_available": "CUPS is not available on the server. Ensure cups-client is installed in the container and CUPS_SERVER environment variable points to your CUPS server."
         },
         "extra_fields": {
             "tab": "Extra Fields",

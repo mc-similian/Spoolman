@@ -41,6 +41,7 @@ LABEL org.opencontainers.image.licenses=MIT
 # Install gosu for privilege dropping
 RUN apt-get update && apt-get install -y \
     gosu \
+    cups-client \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
