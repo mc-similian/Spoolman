@@ -78,8 +78,8 @@ def _spool_to_template_data(spool_pydantic) -> dict:  # noqa: ANN001
         "first_used": str(spool_pydantic.first_used) if spool_pydantic.first_used else None,
         "last_used": str(spool_pydantic.last_used) if spool_pydantic.last_used else None,
         "price": spool_pydantic.price,
-        "initial_weight": spool_pydantic.filament.weight if spool_pydantic.filament else None,
-        "spool_weight": spool_pydantic.filament.spool_weight if spool_pydantic.filament else None,
+        "initial_weight": spool_pydantic.initial_weight,
+        "spool_weight": spool_pydantic.spool_weight,
         "remaining_weight": spool_pydantic.remaining_weight,
         "used_weight": spool_pydantic.used_weight,
         "remaining_length": spool_pydantic.remaining_length,
@@ -166,14 +166,17 @@ def _try_load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def _render_qr(img: Image.Image, spool_pydantic, base_url: str, content_x: int, content_y: int, content_h: int, content_w: int) -> int:  # noqa: ANN001, E501
+def _render_qr(img: Image.Image, spool_pydantic, base_url: str, content_x: int, content_y: int, content_h: int, content_w: int, *, use_http_url: bool = False) -> int:  # noqa: ANN001, E501
     """Render QR code onto the image and return the width consumed."""
     spool_id = spool_pydantic.id
-    qr_value = f"WEB+SPOOLMAN:S-{spool_id}"
-    if base_url:
+    if use_http_url and base_url:
         qr_value = f"{base_url}/spool/show/{spool_id}"
+    else:
+        qr_value = f"WEB+SPOOLMAN:S-{spool_id}"
 
     qr_size = min(content_h, content_w // 2)
+    if qr_size <= 0:
+        return 0
     qr_img = _generate_qr_code(qr_value, qr_size)
 
     qr_y = content_y + (content_h - qr_size) // 2
@@ -225,6 +228,8 @@ def render_label(
     paper_height_mm: float = 29.0,
     margin_mm: float = 2.0,
     base_url: str = "",
+    *,
+    use_http_url: bool = False,
 ) -> bytes:
     """Render a label as a PNG image.
 
@@ -236,7 +241,8 @@ def render_label(
         paper_width_mm: Paper width in mm.
         paper_height_mm: Paper height in mm.
         margin_mm: Margin in mm.
-        base_url: Base URL for QR codes (empty = use WEB+SPOOLMAN protocol).
+        base_url: Base URL for QR codes.
+        use_http_url: If True, use HTTP URL format; otherwise use WEB+SPOOLMAN protocol.
 
     Returns:
         PNG image data as bytes.
@@ -261,7 +267,10 @@ def render_label(
     # Generate QR code if enabled
     qr_width = 0
     if show_qr_code != "no":
-        qr_width = _render_qr(img, spool_pydantic, base_url, content_x, content_y, content_h, content_w)
+        qr_width = _render_qr(
+            img, spool_pydantic, base_url, content_x, content_y, content_h, content_w,
+            use_http_url=use_http_url,
+        )
 
     # Draw text
     font = _try_load_font(text_size_px)

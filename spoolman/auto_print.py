@@ -1,5 +1,6 @@
 """Auto-print labels when spools are created."""
 
+import asyncio
 import json
 import logging
 
@@ -65,7 +66,11 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
 
         # Get auto-print settings
         preset_id = json.loads(await _get_setting_value(db, "auto_print_preset_id"))
-        copies = json.loads(await _get_setting_value(db, "auto_print_copies"))
+        if not preset_id:
+            logger.debug("Auto-print skipped: no preset selected.")
+            return
+
+        copies = int(json.loads(await _get_setting_value(db, "auto_print_copies")))
         printer_name = json.loads(await _get_setting_value(db, "host_printer_name"))
         printer_options = json.loads(await _get_setting_value(db, "host_printer_options"))
         base_url = json.loads(await _get_setting_value(db, "base_url"))
@@ -115,8 +120,9 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
         # Convert DB model to pydantic model for template rendering
         spool_pydantic = Spool.from_db(spool_db_item)
 
-        # Render the label
-        image_data = render_label(
+        # Render the label (CPU-bound, run in thread to avoid blocking event loop)
+        image_data = await asyncio.to_thread(
+            render_label,
             spool_pydantic=spool_pydantic,
             template=template,
             show_qr_code=show_qr_code,
@@ -127,8 +133,9 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
             base_url=base_url,
         )
 
-        # Print the label
-        job_id = print_image(
+        # Print the label (subprocess call, run in thread to avoid blocking event loop)
+        job_id = await asyncio.to_thread(
+            print_image,
             image_data=image_data,
             printer_name=printer_name or None,
             copies=copies,

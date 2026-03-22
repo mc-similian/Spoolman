@@ -100,15 +100,17 @@ export function GeneralSettings() {
       }
     }
 
-    // Auto-print settings
-    if (settings.data?.auto_print_enabled?.value !== JSON.stringify(values.auto_print_enabled ?? false)) {
-      setAutoPrintEnabled.mutate(values.auto_print_enabled ?? false);
-    }
-    if (settings.data?.auto_print_preset_id?.value !== JSON.stringify(values.auto_print_preset_id ?? "")) {
-      setAutoPrintPresetId.mutate(values.auto_print_preset_id ?? "");
-    }
-    if (settings.data?.auto_print_copies?.value !== JSON.stringify(values.auto_print_copies ?? 1)) {
-      setAutoPrintCopies.mutate(values.auto_print_copies ?? 1);
+    // Auto-print settings (only save when in host mode to prevent accidental reset)
+    if (values.print_mode === "host") {
+      if (settings.data?.auto_print_enabled?.value !== JSON.stringify(values.auto_print_enabled ?? false)) {
+        setAutoPrintEnabled.mutate(values.auto_print_enabled ?? false);
+      }
+      if (settings.data?.auto_print_preset_id?.value !== JSON.stringify(values.auto_print_preset_id ?? "")) {
+        setAutoPrintPresetId.mutate(values.auto_print_preset_id ?? "");
+      }
+      if (settings.data?.auto_print_copies?.value !== JSON.stringify(values.auto_print_copies ?? 1)) {
+        setAutoPrintCopies.mutate(values.auto_print_copies ?? 1);
+      }
     }
   };
 
