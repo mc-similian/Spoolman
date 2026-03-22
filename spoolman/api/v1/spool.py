@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from spoolman.api.v1.models import Message, Spool, SpoolEvent
+from spoolman.auto_print import auto_print_spool_label
 from spoolman.database import spool
 from spoolman.database.database import get_db_session
 from spoolman.database.utils import SortOrder
@@ -413,6 +414,10 @@ async def create(  # noqa: ANN201
             archived=body.archived,
             extra=body.extra,
         )
+
+        # Trigger auto-print (fire-and-forget, never blocks spool creation)
+        await auto_print_spool_label(db, db_item)
+
         return Spool.from_db(db_item)
     except ItemCreateError:
         logger.exception("Failed to create spool.")

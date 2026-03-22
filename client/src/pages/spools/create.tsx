@@ -1,7 +1,7 @@
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
 import { Create, useForm } from "@refinedev/antd";
 import { HttpError, IResourceComponentsProps, useTranslate } from "@refinedev/core";
-import { Alert, Button, DatePicker, Divider, Form, Input, InputNumber, message, Radio, Select, Typography } from "antd";
+import { Alert, Button, DatePicker, Divider, Form, Input, InputNumber, Radio, Select, Typography } from "antd";
 import TextArea from "antd/es/input/TextArea";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -13,11 +13,7 @@ import { useLocations } from "../locations/functions";
 import "../../utils/overrides.css";
 import { formatNumberOnUserInput, numberParser, numberParserAllowEmpty } from "../../utils/parsing";
 import { EntityType, useGetFields } from "../../utils/queryFields";
-import { useGetSettings } from "../../utils/querySettings";
 import { getCurrencySymbol, useCurrency } from "../../utils/settings";
-import { getAPIURL } from "../../utils/url";
-import { autoPrintSpool } from "../../utils/autoPrint";
-import { useGetPrintSettings as useGetPrintPresets } from "../printing/printing";
 import { createFilamentFromExternal } from "../filaments/functions";
 import { useGetFilamentSelectOptions } from "./functions";
 import { ISpool, ISpoolParsedExtras, WeightToEnter } from "./model";
@@ -36,57 +32,6 @@ export const SpoolCreate = (props: IResourceComponentsProps & CreateOrCloneProps
   const t = useTranslate();
   const extraFields = useGetFields(EntityType.spool);
   const currency = useCurrency();
-  const [messageApi, contextHolder] = message.useMessage();
-
-  // Auto-print settings
-  const settingsQuery = useGetSettings();
-  const printPresets = useGetPrintPresets();
-
-  const isAutoPrintEnabled = settingsQuery.data
-    ? JSON.parse(settingsQuery.data.auto_print_enabled?.value ?? "false")
-    : false;
-  const autoPrintPresetId = settingsQuery.data
-    ? JSON.parse(settingsQuery.data.auto_print_preset_id?.value ?? '""')
-    : "";
-  const autoPrintCopies = settingsQuery.data
-    ? JSON.parse(settingsQuery.data.auto_print_copies?.value ?? "1")
-    : 1;
-  const hostPrinterName = settingsQuery.data
-    ? JSON.parse(settingsQuery.data.host_printer_name?.value ?? '""')
-    : "";
-  const hostPrinterOptions = settingsQuery.data
-    ? JSON.parse(settingsQuery.data.host_printer_options?.value ?? "{}")
-    : {};
-  const printMode = settingsQuery.data
-    ? JSON.parse(settingsQuery.data.print_mode?.value ?? '"browser"')
-    : "browser";
-  const baseUrlRoot =
-    settingsQuery.data?.base_url?.value !== undefined && JSON.parse(settingsQuery.data.base_url.value) !== ""
-      ? JSON.parse(settingsQuery.data.base_url.value)
-      : window.location.origin;
-
-  const triggerAutoPrint = (spoolId: number) => {
-    if (!isAutoPrintEnabled || printMode !== "host") return;
-
-    const preset = printPresets?.find((p) => p.labelSettings.printSettings.id === autoPrintPresetId);
-    if (!preset) return;
-
-    messageApi.loading(t("settings.general.auto_print.printing"));
-
-    // Fetch full spool data and print
-    fetch(`${getAPIURL()}/spool/${spoolId}`)
-      .then((r) => r.json())
-      .then((fullSpool: ISpool) =>
-        autoPrintSpool(fullSpool, preset, hostPrinterName, hostPrinterOptions, autoPrintCopies, baseUrlRoot, false),
-      )
-      .then(() => {
-        messageApi.success(t("settings.general.auto_print.success"));
-      })
-      .catch((e) => {
-        console.error("Auto-print failed:", e);
-        messageApi.error(`${t("settings.general.auto_print.error")}: ${e instanceof Error ? e.message : String(e)}`);
-      });
-  };
 
   const { form, formProps, formLoading, onFinish, redirect } = useForm<
     ISpool,
@@ -96,13 +41,6 @@ export const SpoolCreate = (props: IResourceComponentsProps & CreateOrCloneProps
   >({
     redirect: false,
     warnWhenUnsavedChanges: false,
-    onMutationSuccess: (data) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const spool = (data as any)?.data;
-      if (spool?.id) {
-        triggerAutoPrint(spool.id);
-      }
-    },
   });
   if (!formProps.initialValues) {
     formProps.initialValues = {};
@@ -560,7 +498,6 @@ export const SpoolCreate = (props: IResourceComponentsProps & CreateOrCloneProps
           <ExtraFieldFormItem key={index} field={field} />
         ))}
       </Form>
-      {contextHolder}
     </Create>
   );
 };
