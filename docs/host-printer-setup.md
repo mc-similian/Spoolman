@@ -11,7 +11,7 @@ Die Anleitung ist aber auch für andere Drucker und Setups anwendbar.
 1. [Architektur-Überblick](#architektur-überblick)
 2. [CUPS auf dem Proxmox Host installieren](#1-cups-auf-dem-proxmox-host-installieren)
 3. [Y41BT Drucker am Host einrichten](#2-y41bt-drucker-am-host-einrichten)
-4. [Etikettenformat 30x40mm konfigurieren](#3-etikettenformat-30x40mm-konfigurieren)
+4. [Etikettenformat konfigurieren](#3-etikettenformat-konfigurieren)
 5. [CUPS für Netzwerkzugriff konfigurieren](#4-cups-für-netzwerkzugriff-konfigurieren)
 6. [Docker Compose anpassen](#5-docker-compose-anpassen)
 7. [Spoolman Einstellungen](#6-spoolman-einstellungen)
@@ -76,19 +76,31 @@ usermod -aG lpadmin root
 | Eigenschaft | Wert |
 |---|---|
 | Typ | Thermodirektdrucker |
+| Protokoll | TSPL (TSC Printer Language) |
 | Auflösung | 203 x 203 DPI |
 | Druckgeschwindigkeit | max. 100 mm/s |
-| Papierbreite | 35–110 mm |
-| Anschluss | USB-C, Bluetooth |
-| Hersteller | KNAON / FlashLabel |
+| **Papierbreite** | **35–110 mm (Minimum 35mm!)** |
+| Anschluss | USB-C, Bluetooth (BT nur Windows) |
+| Hersteller | KNAON / FlashLabel (Xiamen Print Future Technology) |
+| FCC ID | 2A6FW-Y41 |
 
-### Option A: Offiziellen KNAON Linux-Treiber installieren (empfohlen)
+> **Wichtig zu 30x40mm Etiketten:** Der Y41BT hat eine **minimale Papierbreite von 35mm**. 30mm breite Etiketten werden **nicht unterstützt**. Alternativen:
+> - **40x30mm Etiketten** (quer einlegen, 40mm Breite) — funktioniert, aber 30mm Länge ist sehr kurz
+> - **40x40mm Etiketten** — sicherer bezüglich des Einzugs
+> - Etiketten ab **35mm Breite** verwenden (z.B. 35x45mm, 40x30mm, etc.)
+>
+> Bei jedem Etikettenwechsel muss die **Intelligent Label Calibration** durchgeführt werden: Halte die Feeder-Taste gedrückt, bis ein Piepton ertönt.
+
+### Option A: Offiziellen KNAON Linux-Treiber installieren (empfohlen für AMD64)
+
+Der offizielle Treiber installiert einen CUPS-Filter (`raster-tspl`) und eine PPD-Datei.
 
 1. Drucker per USB-C an den Host anschließen und einschalten.
 
 2. Treiber von der KNAON-Website herunterladen:
    - Gehe zu [knaon.com/pages/download-driver-user-manual](https://knaon.com/pages/download-driver-user-manual)
    - Lade den **Linux-Treiber (CPU: AMD64)** herunter (`.run`-Datei)
+   - **Hinweis:** Der offizielle Treiber ist **nur für AMD64** verfügbar (kein ARM/Raspberry Pi!)
 
 3. Treiber installieren:
    ```bash
@@ -110,9 +122,39 @@ usermod -aG lpadmin root
      -m <treiber-name-aus-lpinfo>
    ```
 
-### Option B: Generische Raw-Queue (Fallback)
+### Option B: Community TSPL-Treiber (auch für ARM/Raspberry Pi)
 
-Falls der offizielle Treiber nicht funktioniert, kann eine Raw-Queue verwendet werden:
+Der Y41BT ist ein TSPL-kompatibler Drucker (verwandt mit dem HPRT N41/SL42). Es gibt mehrere Open-Source CUPS-Treiber:
+
+| Projekt | Sprache | Hinweise |
+|---|---|---|
+| [thorrak/rpi-tspl-cups-driver](https://github.com/thorrak/rpi-tspl-cups-driver) | C | Vorkompilierte `raster-tspl`-Filter + PPDs |
+| [ch0dak/Label-Printer-for-Linux](https://github.com/ch0dak/Label-Printer-for-Linux) | Rust | Baubarer CUPS-Filter |
+| [prodocik/xprinter-xp-v3-linux](https://github.com/prodocik/xprinter-xp-v3-linux) | Python | Python-basierter TSPL-Filter |
+
+Beispielinstallation mit `rpi-tspl-cups-driver`:
+```bash
+git clone https://github.com/thorrak/rpi-tspl-cups-driver.git
+cd rpi-tspl-cups-driver
+
+# Filter und PPD installieren
+sudo cp raster-tspl /usr/lib/cups/filter/
+sudo chmod 755 /usr/lib/cups/filter/raster-tspl
+sudo cp ppd/*.ppd /usr/share/cups/model/
+
+# CUPS neustarten
+sudo systemctl restart cups
+
+# Drucker hinzufügen
+lpinfo -v | grep usb
+lpadmin -p Y41BT -E \
+  -v "usb://KNAON/Y41BT" \
+  -m <ppd-datei-aus-lpinfo-m>
+```
+
+### Option C: Generische Raw-Queue (Fallback)
+
+Falls kein TSPL-Treiber funktioniert, kann eine Raw-Queue verwendet werden:
 
 ```bash
 # USB-URI ermitteln
@@ -127,7 +169,7 @@ lpadmin -p Y41BT -E \
 lpadmin -d Y41BT
 ```
 
-> **Hinweis:** Bei einer Raw-Queue werden Druckdaten ohne Konvertierung direkt an den Drucker gesendet. Für PNG-Bilder (wie Spoolman sie sendet) funktioniert das mit den meisten Thermodruckern.
+> **Hinweis:** Bei einer Raw-Queue werden Druckdaten ohne Konvertierung direkt an den Drucker gesendet. Dies funktioniert am besten, wenn Spoolman das Bild bereits in der richtigen Größe und Auflösung (203 DPI) rendert.
 
 ### Drucker testen
 
@@ -141,13 +183,26 @@ echo "Testdruck Y41BT" | lp -d Y41BT
 
 ---
 
-## 3. Etikettenformat 30x40mm konfigurieren
+## 3. Etikettenformat konfigurieren
+
+> **Wichtig:** Der Y41BT unterstützt Papierbreiten von **35–110mm**. 30mm Breite ist **nicht möglich**.
+> Falls du 30x40mm Etiketten verwenden möchtest, lege sie **quer** ein (40mm Breite x 30mm Höhe) — oder verwende Etiketten ab 35mm Breite.
+
+### Beispielformate
+
+| Etikett | CUPS-Format | Hinweis |
+|---|---|---|
+| 40x30mm (quer) | `Custom.40x30mm` | 30mm Länge ist sehr kurz, Einzug ggf. problematisch |
+| 40x40mm | `Custom.40x40mm` | Gute Alternative |
+| 50x30mm | `Custom.50x30mm` | Mehr Platz für Inhalt |
+| 62x29mm | `Custom.62x29mm` | Gängiges Etikettenformat |
+| 100x150mm | `Custom.100x150mm` | Standardformat (4x6") |
 
 ### Standardformat setzen
 
 ```bash
-# Benutzerdefinierte Papiergröße als Standard setzen
-lpadmin -p Y41BT -o PageSize=Custom.30x40mm
+# Benutzerdefinierte Papiergröße als Standard setzen (Beispiel 40x30mm)
+lpadmin -p Y41BT -o PageSize=Custom.40x30mm
 
 # Weitere nützliche Optionen
 lpadmin -p Y41BT -o fit-to-page=true
@@ -164,19 +219,28 @@ lpoptions -p Y41BT -l
 lpstat -l -p Y41BT
 ```
 
-### Drucker-Instanz für 30x40mm erstellen (optional)
+### Drucker-Instanzen für verschiedene Etikettengrößen (optional)
 
-Falls du mehrere Etikettengrößen verwendest, kannst du eine eigene Instanz anlegen:
+Falls du mehrere Etikettengrößen verwendest, kannst du eigene Instanzen anlegen:
 
 ```bash
-lpoptions -p Y41BT/label30x40 -o PageSize=Custom.30x40mm -o fit-to-page=true
+lpoptions -p Y41BT/label40x30 -o PageSize=Custom.40x30mm -o fit-to-page=true
+lpoptions -p Y41BT/label62x29 -o PageSize=Custom.62x29mm -o fit-to-page=true
 ```
 
-### Testdruck mit der konfigurierten Größe
+### Etikettenformat kalibrieren
+
+Bei jedem Wechsel der Etikettengröße muss die automatische Kalibrierung durchgeführt werden:
+
+1. Neue Etiketten in den Drucker einlegen
+2. Die **Feeder-Taste** gedrückt halten, bis ein **Piepton** ertönt
+3. Der Drucker fährt einige Etiketten durch und erkennt die Größe automatisch
+
+### Testdruck
 
 ```bash
-# PNG-Bild mit der korrekten Größe drucken
-lp -d Y41BT -o PageSize=Custom.30x40mm -o fit-to-page label_test.png
+# PNG-Bild mit der konfigurierten Größe drucken
+lp -d Y41BT -o PageSize=Custom.40x30mm -o fit-to-page label_test.png
 ```
 
 ---
@@ -284,10 +348,10 @@ network_mode: host
 3. Im Abschnitt **Drucken**:
    - **Druckmodus** auf **Host-Drucker** umstellen
    - **Host-Drucker** → den `Y41BT` aus dem Dropdown wählen
-   - **Druckeroptionen** (optional):
+   - **Druckeroptionen** (optional, Beispiel für 40x30mm):
      ```json
      {
-       "media": "Custom.30x40mm",
+       "media": "Custom.40x30mm",
        "fit-to-page": "",
        "orientation-requested": "3"
      }
@@ -306,9 +370,9 @@ network_mode: host
 
 ### Spoolman Druck-Layout anpassen
 
-Im Label-Druckdialog solltest du für 30x40mm Etiketten folgende Einstellungen verwenden:
+Im Label-Druckdialog solltest du für deine Etiketten folgende Einstellungen verwenden (Beispiel 40x30mm):
 
-- **Papiergröße:** Custom → 30mm x 40mm
+- **Papiergröße:** Custom → 40mm x 30mm
 - **Spalten:** 1
 - **Zeilen:** 1
 - **Ränder:** alle auf 0mm
@@ -447,10 +511,16 @@ lpadmin -d MeinDrucker
 
 ## Quellen
 
+- [KNAON Y41BT Produktseite](https://knaon.com/blogs/knaon-y41bt)
 - [KNAON Y41BT User Manual](https://knaon.com/pages/knaon-y41bt-user-manual)
 - [KNAON Y41BT Linux USB Setup Guide](https://knaon.com/blogs/knaon-y41bt/how-to-use-printer-on-linux-via-usb-cable)
+- [KNAON / FlashLabel Driver Downloads](https://knaon.com/pages/download-driver-user-manual)
 - [FlashLabel Driver Downloads](https://flashlabel.com/pages/download-driver-user-manual)
+- [thorrak/rpi-tspl-cups-driver (Community TSPL-Treiber)](https://github.com/thorrak/rpi-tspl-cups-driver)
+- [ch0dak/Label-Printer-for-Linux (Rust TSPL-Treiber)](https://github.com/ch0dak/Label-Printer-for-Linux)
+- [prodocik/xprinter-xp-v3-linux (Python TSPL-Treiber)](https://github.com/prodocik/xprinter-xp-v3-linux)
 - [CUPS Command-Line Administration](https://www.cups.org/doc/admin.html)
 - [ArchWiki: CUPS](https://wiki.archlinux.org/title/CUPS)
 - [Proxmox Forum: USB Passthrough in LXC](https://forum.proxmox.com/threads/pass-usb-device-to-lxc.124205/)
 - [Proxmox Forum: LXC mit CUPS und /dev/usb/lp0](https://forum.proxmox.com/threads/lxc-with-cups-and-dev-usb-lp0.39020/)
+- [FCC ID: 2A6FW-Y41](https://fccid.io/2A6FW-Y41)
