@@ -15,7 +15,7 @@ permissions:
   packages: read
 
 env:
-  GHCR_IMAGE: donkie/spoolman
+  GHCR_IMAGE: ${{ github.repository_owner }}/spoolman
 
 jobs:
   #
@@ -437,7 +437,7 @@ jobs:
           cd /tmp/spoolman
           echo '{
             "project_name": "Spoolman",
-            "project_owner": "Donkie",
+            "project_owner": "${{ github.repository_owner }}",
             "version": "${{ github.ref_name }}"
           }' > release_info.json
 
