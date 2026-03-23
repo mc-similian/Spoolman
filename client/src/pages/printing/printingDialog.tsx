@@ -247,7 +247,12 @@ const PrintingDialog = ({
                     transform: scale(1) !important;
                   }
                   .print-page {
-                    page-break-before: auto;
+                    page-break-after: always;
+                    break-after: page;
+                  }
+                  .print-page:last-child {
+                    page-break-after: auto;
+                    break-after: auto;
                   }
                 }
 
