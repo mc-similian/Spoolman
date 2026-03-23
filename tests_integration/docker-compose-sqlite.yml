@@ -1,12 +1,12 @@
 version: '3.8'
 services:
   spoolman:
-    image: ${GHCR_IMAGE:-donkie/spoolman}:test
+    image: ${GHCR_IMAGE}:test
     environment:
       - SPOOLMAN_LOGGING_LEVEL=INFO
       - TZ=Europe/Stockholm
   tester:
-    image: ${GHCR_IMAGE:-donkie/spoolman}-tester:latest
+    image: ${GHCR_IMAGE}-tester:latest
     volumes:
       - ./tests:/tester/tests
     environment:

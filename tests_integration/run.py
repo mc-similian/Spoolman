@@ -8,11 +8,12 @@ import sys
 if __name__ == "__main__":
     print("Building and running integration tests...")
     print("Building Spoolman...")
-    if os.system("docker build -t donkie/spoolman:test .") > 0:
+    ghcr_image = os.environ.get("GHCR_IMAGE", "spoolman/spoolman")
+    if os.system(f"docker build -t {ghcr_image}:test .") > 0:
         print("Failed to build Spoolman!")
         sys.exit(1)
     print("Building Spoolman tester...")
-    if os.system("docker build -t donkie/spoolman-tester:latest tests_integration") > 0:
+    if os.system(f"docker build -t {ghcr_image}-tester:latest tests_integration") > 0:
         print("Failed to build Spoolman tester!")
         sys.exit(1)
 

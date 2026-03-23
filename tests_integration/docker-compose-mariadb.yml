@@ -22,7 +22,7 @@ services:
       timeout: 5s
       retries: 30
   spoolman:
-    image: ${GHCR_IMAGE:-donkie/spoolman}:test
+    image: ${GHCR_IMAGE}:test
     environment:
       - SPOOLMAN_DB_TYPE=mysql
       - SPOOLMAN_DB_HOST=db
@@ -36,7 +36,7 @@ services:
       db:
         condition: service_healthy
   tester:
-    image: ${GHCR_IMAGE:-donkie/spoolman}-tester:latest
+    image: ${GHCR_IMAGE}-tester:latest
     volumes:
       - ./tests:/tester/tests
     environment:
