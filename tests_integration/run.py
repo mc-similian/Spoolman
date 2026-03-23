@@ -1,6 +1,6 @@
 """Build and run the integration tests."""
 
-# ruff: noqa: S605, S607, T201
+# ruff: noqa: S605, T201
 
 import os
 import sys
