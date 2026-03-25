@@ -90,6 +90,11 @@
                 "grid": "Gitter"
             },
             "saveAsImage": "Als Bild speichern",
+            "printToHost": "Über Host drucken",
+            "sendingToHost": "Wird an Host-Drucker gesendet...",
+            "hostPrintSuccess": "Druckauftrag erfolgreich gesendet!",
+            "hostPrintError": "Host-Druck fehlgeschlagen",
+            "noPages": "Keine Seiten zum Drucken",
             "settings": "Vorlage",
             "defaultSettings": "Standard",
             "addSettings": "Neue Vorlage hinzufügen",
@@ -367,6 +372,47 @@
             "round_prices": {
                 "label": "Gerundeter Preis",
                 "tooltip": "Rundet die Preise auf die nächsthöhere ganze Zahl."
+            },
+            "printing": {
+                "title": "Drucken"
+            },
+            "print_mode": {
+                "label": "Druckmodus",
+                "tooltip": "Wähle, ob über den Browser-Druckdialog oder über einen am Spoolman-Host angeschlossenen Drucker gedruckt werden soll.",
+                "browser": "Browser",
+                "host": "Host-Drucker"
+            },
+            "host_printer": {
+                "label": "Host-Drucker",
+                "tooltip": "Wähle den CUPS-Drucker für den Host-Druck. Leer lassen für den Systemstandard.",
+                "placeholder": "Systemstandard",
+                "default": "Standard"
+            },
+            "printer_options": {
+                "label": "Druckeroptionen",
+                "tooltip": "JSON-Objekt mit CUPS-Druckoptionen. Häufige Optionen: media (z.B. \"Custom.62x29mm\"), fit-to-page, orientation-requested (3=Hochformat, 4=Querformat).",
+                "invalidJson": "Ungültiges JSON-Format"
+            },
+            "cups_not_available": "CUPS ist auf dem Server nicht verfügbar. Stelle sicher, dass cups-client im Container installiert ist und die Umgebungsvariable CUPS_SERVER auf deinen CUPS-Server zeigt.",
+            "auto_print": {
+                "title": "Automatischer Druck",
+                "enabled": {
+                    "label": "Automatisch drucken bei Spulen-Erstellung",
+                    "tooltip": "Druckt automatisch ein Etikett, wenn eine neue Spule erstellt wird. Erfordert den Host-Druckmodus und einen konfigurierten Drucker."
+                },
+                "preset": {
+                    "label": "Etiketten-Vorlage",
+                    "tooltip": "Wähle die Druckvorlage für den automatischen Etikettendruck.",
+                    "placeholder": "Vorlage auswählen",
+                    "no_presets": "Keine Vorlagen konfiguriert. Erstelle zuerst eine Vorlage im Druckdialog."
+                },
+                "copies": {
+                    "label": "Kopien",
+                    "tooltip": "Anzahl der Kopien, die für jede neue Spule gedruckt werden."
+                },
+                "printing": "Etikett wird gedruckt...",
+                "success": "Etikett erfolgreich gedruckt",
+                "error": "Etikett konnte nicht gedruckt werden"
             }
         },
         "extra_fields": {

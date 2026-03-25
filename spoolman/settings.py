@@ -72,3 +72,11 @@ register_setting("base_url", SettingType.STRING, json.dumps(""))
 
 register_setting("locations", SettingType.ARRAY, json.dumps([]))
 register_setting("locations_spoolorders", SettingType.OBJECT, json.dumps({}))
+
+register_setting("print_mode", SettingType.STRING, json.dumps("browser"))
+register_setting("host_printer_name", SettingType.STRING, json.dumps(""))
+register_setting("host_printer_options", SettingType.OBJECT, json.dumps({}))
+
+register_setting("auto_print_enabled", SettingType.BOOLEAN, json.dumps(obj=False))
+register_setting("auto_print_preset_id", SettingType.STRING, json.dumps(""))
+register_setting("auto_print_copies", SettingType.NUMBER, json.dumps(1))

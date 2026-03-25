@@ -1,4 +1,4 @@
-import { FileImageOutlined, PrinterOutlined } from "@ant-design/icons";
+import { CloudUploadOutlined, FileImageOutlined, PrinterOutlined } from "@ant-design/icons";
 import { useTranslate } from "@refinedev/core";
 import {
   Button,
@@ -7,6 +7,7 @@ import {
   Divider,
   Form,
   InputNumber,
+  message,
   Radio,
   RadioChangeEvent,
   Row,
@@ -17,6 +18,8 @@ import {
 import * as htmlToImage from "html-to-image";
 import { ReactElement, useRef } from "react";
 import { useReactToPrint } from "react-to-print";
+import { useGetSettings } from "../../utils/querySettings";
+import { usePrintToHost } from "../../utils/queryPrinter";
 import { useSavedState } from "../../utils/saveload";
 import { PrintSettings } from "./printing";
 
@@ -92,6 +95,56 @@ const PrintingDialog = ({
 
   const contentRef = useRef<HTMLDivElement>(null);
   const reactToPrintFn = useReactToPrint({ contentRef });
+
+  const settingsQuery = useGetSettings();
+  const printToHostMutation = usePrintToHost();
+  const [messageApi, messageContextHolder] = message.useMessage();
+
+  const printMode = settingsQuery.data
+    ? JSON.parse(settingsQuery.data.print_mode?.value ?? '"browser"')
+    : "browser";
+  const hostPrinterName = settingsQuery.data
+    ? JSON.parse(settingsQuery.data.host_printer_name?.value ?? '""')
+    : "";
+  const hostPrinterOptions = settingsQuery.data
+    ? JSON.parse(settingsQuery.data.host_printer_options?.value ?? '{}')
+    : {};
+
+  const printToHost = async () => {
+    const pages = document.querySelectorAll(".print-page");
+    if (pages.length === 0) {
+      messageApi.error(t("printing.generic.noPages"));
+      return;
+    }
+
+    messageApi.loading(t("printing.generic.sendingToHost"));
+
+    for (let i = 0; i < pages.length; i++) {
+      try {
+        const dataUrl = await htmlToImage.toPng(pages[i] as HTMLElement, {
+          backgroundColor: "#FFF",
+          cacheBust: true,
+          pixelRatio: 2,
+        });
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+
+        await printToHostMutation.mutateAsync({
+          imageBlob: blob,
+          printerName: hostPrinterName || undefined,
+          copies: 1,
+          options: hostPrinterOptions,
+        });
+      } catch (error) {
+        messageApi.error(
+          `${t("printing.generic.hostPrintError")}: ${error instanceof Error ? error.message : String(error)}`
+        );
+        return;
+      }
+    }
+
+    messageApi.success(t("printing.generic.hostPrintSuccess"));
+  };
 
   const itemWidth = (paperWidth - margin.left - margin.right - spacing.horizontal) / paperColumns - spacing.horizontal;
   const itemHeight = (paperHeight - margin.top - margin.bottom - spacing.vertical) / paperRows - spacing.vertical;
@@ -823,12 +876,25 @@ const PrintingDialog = ({
             <Button type="primary" icon={<FileImageOutlined />} size="large" onClick={saveAsImage}>
               {t("printing.generic.saveAsImage")}
             </Button>
-            <Button type="primary" icon={<PrinterOutlined />} size="large" onClick={() => reactToPrintFn()}>
-              {t("printing.generic.print")}
-            </Button>
+            {printMode === "host" ? (
+              <Button
+                type="primary"
+                icon={<CloudUploadOutlined />}
+                size="large"
+                onClick={printToHost}
+                loading={printToHostMutation.isPending}
+              >
+                {t("printing.generic.printToHost")}
+              </Button>
+            ) : (
+              <Button type="primary" icon={<PrinterOutlined />} size="large" onClick={() => reactToPrintFn()}>
+                {t("printing.generic.print")}
+              </Button>
+            )}
           </Space>
         </Col>
       </Row>
+      {messageContextHolder}
     </>
   );
 };
