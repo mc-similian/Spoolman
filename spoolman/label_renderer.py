@@ -218,8 +218,8 @@ def _render_qr(img: Image.Image, spool_pydantic, base_url: str, content_x: int, 
     return container_w
 
 
-def _draw_wrapped_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, text_x: int, text_y: int, text_w: int, text_h: int, text_size_px: int) -> None:  # noqa: E501
-    """Draw word-wrapped text onto the image."""
+def _wrap_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, text_w: int) -> list[str]:  # noqa: E501
+    """Word-wrap text to fit within the given width."""
     lines = text.split("\n")
     wrapped_lines: list[str] = []
     for line in lines:
@@ -239,10 +239,34 @@ def _draw_wrapped_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.Fre
                 current_line = word
         if current_line:
             wrapped_lines.append(current_line)
+    return wrapped_lines
 
-    y = text_y
+
+def _calc_text_block_height(draw: ImageDraw.ImageDraw, wrapped_lines: list[str], font: ImageFont.FreeTypeFont | ImageFont.ImageFont, text_size_px: int, line_spacing: int) -> int:  # noqa: E501
+    """Calculate the total height of a wrapped text block."""
+    total = 0
+    for i, line in enumerate(wrapped_lines):
+        if line:
+            bbox = draw.textbbox((0, 0), line, font=font)
+            total += bbox[3] - bbox[1]
+        else:
+            total += text_size_px
+        if i < len(wrapped_lines) - 1:
+            total += line_spacing
+    return total
+
+
+def _draw_wrapped_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, text_x: int, text_y: int, text_w: int, text_h: int, text_size_px: int) -> None:  # noqa: E501
+    """Draw word-wrapped, vertically centered text onto the image."""
+    line_spacing = mm_to_px(0.5)
+    wrapped_lines = _wrap_text(draw, text, font, text_w)
+
+    # Calculate total text block height and center vertically
+    block_h = _calc_text_block_height(draw, wrapped_lines, font, text_size_px, line_spacing)
+    y = text_y + max(0, (text_h - block_h) // 2)
+
     max_y = text_y + text_h
-    for wrapped_line in wrapped_lines:
+    for i, wrapped_line in enumerate(wrapped_lines):
         if y >= max_y:
             break
         draw.text((text_x, y), wrapped_line, fill="black", font=font)
@@ -251,7 +275,7 @@ def _draw_wrapped_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.Fre
             line_h = bbox[3] - bbox[1]
         else:
             line_h = text_size_px
-        y += line_h + mm_to_px(0.5)
+        y += line_h + line_spacing
 
 
 def render_label(
@@ -312,6 +336,15 @@ def render_label(
     content_y = pad_top
     content_w = width_px - pad_left - pad_right
     content_h = height_px - pad_top - pad_bottom
+
+    logger.info(
+        "render_label: item=%.1fx%.1fmm (%dx%dpx), text_size=%.1fmm (%dpx), "
+        "padding=%.1f/%.1f/%.1f/%.1f, content=%dx%dpx, qr=%s",
+        item_width_mm, item_height_mm, width_px, height_px,
+        text_size_mm, text_size_px,
+        padding_top, padding_right, padding_bottom, padding_left,
+        content_w, content_h, show_qr_code,
+    )
 
     img = Image.new("RGB", (width_px, height_px), "white")
     draw = ImageDraw.Draw(img)

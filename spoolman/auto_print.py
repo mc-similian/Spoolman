@@ -153,6 +153,15 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
         # Convert DB model to pydantic model for template rendering
         spool_pydantic = Spool.from_db(spool_db_item)
 
+        logger.info(
+            "Auto-print params: textSize=%.1fmm, paper=%sx%s (%s), margins=%s, "
+            "columns=%d, rows=%d, spacing=%s, item=%.1fx%.1fmm, "
+            "showQR=%s, useHTTPUrl=%s, showContent=%s, printerMargin=%s",
+            text_size_mm, paper_width, paper_height, paper_size, margin,
+            columns, rows, spacing, item_width, item_height,
+            show_qr_code, use_http_url, show_content, printer_margin,
+        )
+
         # Render the label at item dimensions (no outer margins, matching UI capture)
         image_data = await asyncio.to_thread(
             render_label,
