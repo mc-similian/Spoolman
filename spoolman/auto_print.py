@@ -115,25 +115,37 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
             paper_width, paper_height = paper_dimensions[paper_size]
 
         margin = print_settings.get("margin", {"top": 2, "bottom": 2, "left": 2, "right": 2})
+        spacing = print_settings.get("spacing", {"horizontal": 0, "vertical": 0})
+        columns = print_settings.get("columns", 1)
+        rows = print_settings.get("rows", 1)
+
+        # Calculate item dimensions exactly like the frontend (printingDialog.tsx):
+        # itemWidth = (paperWidth - margin.left - margin.right - spacing.horizontal) / columns - spacing.horizontal
+        # itemHeight = (paperHeight - margin.top - margin.bottom - spacing.vertical) / rows - spacing.vertical
+        spacing_h = spacing.get("horizontal", 0)
+        spacing_v = spacing.get("vertical", 0)
+        margin_top = margin.get("top", 2)
+        margin_bottom = margin.get("bottom", 2)
+        margin_left = margin.get("left", 2)
+        margin_right = margin.get("right", 2)
+
+        item_width = (paper_width - margin_left - margin_right - spacing_h) / columns - spacing_h
+        item_height = (paper_height - margin_top - margin_bottom - spacing_v) / rows - spacing_v
 
         # Convert DB model to pydantic model for template rendering
         spool_pydantic = Spool.from_db(spool_db_item)
 
-        # Render the label (CPU-bound, run in thread to avoid blocking event loop)
+        # Render the label at item dimensions (no outer margins, matching UI capture)
         image_data = await asyncio.to_thread(
             render_label,
             spool_pydantic=spool_pydantic,
             template=template,
             show_qr_code=show_qr_code,
             text_size_mm=text_size_mm,
-            paper_width_mm=paper_width,
-            paper_height_mm=paper_height,
+            item_width_mm=item_width,
+            item_height_mm=item_height,
             base_url=base_url,
             use_http_url=use_http_url,
-            margin_top_mm=margin.get("top", 2),
-            margin_bottom_mm=margin.get("bottom", 2),
-            margin_left_mm=margin.get("left", 2),
-            margin_right_mm=margin.get("right", 2),
         )
 
         # Print the label (subprocess call, run in thread to avoid blocking event loop)

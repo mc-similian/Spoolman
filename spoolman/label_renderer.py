@@ -1,4 +1,12 @@
-"""Server-side label rendering using Pillow and qrcode."""
+"""Server-side label rendering using Pillow and qrcode.
+
+Replicates the CSS layout from the frontend's qrCodePrintingDialog.tsx:
+- .print-qrcode-item:     display: flex; width: 100%; height: 100%
+- .print-qrcode-container: max-width: 50%; display: flex
+- .print-qrcode (SVG):     padding: 2mm; object-fit: contain; width/height: 100%
+- .print-qrcode-title:     flex: 1 1 auto; font-size: Xmm
+- .print-qrcode-title p:   padding: 1mm 1mm 1mm 0; margin: 0; white-space: pre-wrap
+"""
 
 import io
 import logging
@@ -169,25 +177,47 @@ def _try_load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def _render_qr(img: Image.Image, spool_pydantic, base_url: str, content_x: int, content_y: int, content_h: int, content_w: int, *, use_http_url: bool = False) -> int:  # noqa: ANN001, E501
-    """Render QR code onto the image and return the width consumed."""
+def _render_qr(img: Image.Image, spool_pydantic, base_url: str, width_px: int, height_px: int, *, use_http_url: bool = False) -> int:  # noqa: ANN001, E501
+    """Render QR code onto the image matching the CSS layout.
+
+    CSS layout replicated:
+    - .print-qrcode-container: max-width: 50%; display: flex
+    - .print-qrcode: padding: 2mm; object-fit: contain; width/height: 100%
+
+    The QR code gets 2mm padding on all sides. The container is at most 50% of
+    the total width. The QR is square and fits within the padded area.
+
+    Returns the total width consumed by the QR container (QR + padding).
+    """
     spool_id = spool_pydantic.id
     if use_http_url and base_url:
         qr_value = f"{base_url}/spool/show/{spool_id}"
     else:
         qr_value = f"WEB+SPOOLMAN:S-{spool_id}"
 
-    qr_size = min(content_h, content_w // 2)
+    qr_padding = mm_to_px(2)
+    max_container_w = width_px // 2
+
+    # Available space for QR inside padding
+    available_w = max_container_w - 2 * qr_padding
+    available_h = height_px - 2 * qr_padding
+
+    # QR is square, constrained by the smaller dimension
+    qr_size = min(available_w, available_h)
     if qr_size <= 0:
         return 0
+
     qr_img = _generate_qr_code(qr_value, qr_size)
 
-    qr_y = content_y
-    img.paste(qr_img, (content_x, qr_y))
-    return qr_size + mm_to_px(2)
+    # Place QR at top-left with padding (matching CSS: aligned to top)
+    img.paste(qr_img, (qr_padding, qr_padding))
+
+    # Container width shrinks to fit: QR + 2*padding
+    container_w = qr_size + 2 * qr_padding
+    return container_w
 
 
-def _draw_wrapped_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, text_x: int, text_y: int, text_w: int, content_h: int, content_y: int, text_size_px: int) -> None:  # noqa: E501
+def _draw_wrapped_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, text_x: int, text_y: int, text_w: int, text_h: int, text_size_px: int) -> None:  # noqa: E501
     """Draw word-wrapped text onto the image."""
     lines = text.split("\n")
     wrapped_lines: list[str] = []
@@ -210,8 +240,9 @@ def _draw_wrapped_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.Fre
             wrapped_lines.append(current_line)
 
     y = text_y
+    max_y = text_y + text_h
     for wrapped_line in wrapped_lines:
-        if y >= content_y + content_h:
+        if y >= max_y:
             break
         draw.text((text_x, y), wrapped_line, fill="black", font=font)
         if wrapped_line:
@@ -227,46 +258,47 @@ def render_label(
     template: str,
     show_qr_code: str = "withIcon",
     text_size_mm: float = 3.0,
-    paper_width_mm: float = 62.0,
-    paper_height_mm: float = 29.0,
-    margin_mm: float = 2.0,
+    item_width_mm: float = 58.0,
+    item_height_mm: float = 25.0,
     base_url: str = "",
     *,
     use_http_url: bool = False,
-    margin_top_mm: float | None = None,
-    margin_bottom_mm: float | None = None,
-    margin_left_mm: float | None = None,
-    margin_right_mm: float | None = None,
+    # Legacy parameters (ignored, kept for backwards compatibility)
+    paper_width_mm: float = 62.0,  # noqa: ARG001
+    paper_height_mm: float = 29.0,  # noqa: ARG001
+    margin_mm: float = 2.0,  # noqa: ARG001
+    margin_top_mm: float | None = None,  # noqa: ARG001
+    margin_bottom_mm: float | None = None,  # noqa: ARG001
+    margin_left_mm: float | None = None,  # noqa: ARG001
+    margin_right_mm: float | None = None,  # noqa: ARG001
 ) -> bytes:
-    """Render a label as a PNG image.
+    """Render a label as a PNG image matching the frontend CSS layout.
+
+    The image represents the content area of a single label item,
+    exactly as captured by htmlToImage.toPng in the UI. No outer margins
+    are included — those are handled by the page layout.
+
+    Internal layout matches the CSS from qrCodePrintingDialog.tsx:
+    - QR code: 2mm padding, container max 50% width, square QR
+    - Text: padding 1mm top, 1mm right, 1mm bottom, 0 left
 
     Args:
         spool_pydantic: The Spool pydantic model object.
         template: Label template string with {tags}.
         show_qr_code: "no", "simple", or "withIcon".
         text_size_mm: Text size in mm.
-        paper_width_mm: Paper width in mm.
-        paper_height_mm: Paper height in mm.
-        margin_mm: Fallback margin in mm (used if individual margins not set).
+        item_width_mm: Width of the label content area in mm.
+        item_height_mm: Height of the label content area in mm.
         base_url: Base URL for QR codes.
         use_http_url: If True, use HTTP URL format; otherwise use WEB+SPOOLMAN protocol.
-        margin_top_mm: Top margin in mm (overrides margin_mm).
-        margin_bottom_mm: Bottom margin in mm (overrides margin_mm).
-        margin_left_mm: Left margin in mm (overrides margin_mm).
-        margin_right_mm: Right margin in mm (overrides margin_mm).
 
     Returns:
         PNG image data as bytes.
 
     """
-    width_px = mm_to_px(paper_width_mm)
-    height_px = mm_to_px(paper_height_mm)
+    width_px = mm_to_px(item_width_mm)
+    height_px = mm_to_px(item_height_mm)
     text_size_px = max(mm_to_px(text_size_mm), 8)
-
-    m_top = mm_to_px(margin_top_mm if margin_top_mm is not None else margin_mm)
-    m_bottom = mm_to_px(margin_bottom_mm if margin_bottom_mm is not None else margin_mm)
-    m_left = mm_to_px(margin_left_mm if margin_left_mm is not None else margin_mm)
-    m_right = mm_to_px(margin_right_mm if margin_right_mm is not None else margin_mm)
 
     img = Image.new("RGB", (width_px, height_px), "white")
     draw = ImageDraw.Draw(img)
@@ -274,25 +306,29 @@ def render_label(
     spool_data = _spool_to_template_data(spool_pydantic)
     label_text = _substitute_template(template, spool_data)
 
-    content_x = m_left
-    content_y = m_top
-    content_w = width_px - m_left - m_right
-    content_h = height_px - m_top - m_bottom
-
-    # Generate QR code if enabled
-    qr_width = 0
+    # QR code section (matches CSS: .print-qrcode-container + .print-qrcode)
+    qr_container_w = 0
     if show_qr_code != "no":
-        qr_width = _render_qr(
-            img, spool_pydantic, base_url, content_x, content_y, content_h, content_w,
+        qr_container_w = _render_qr(
+            img, spool_pydantic, base_url, width_px, height_px,
             use_http_url=use_http_url,
         )
 
-    # Draw text
+    # Text section (matches CSS: .print-qrcode-title p { padding: 1mm 1mm 1mm 0 })
+    text_pad_top = mm_to_px(1)
+    text_pad_right = mm_to_px(1)
+    text_pad_bottom = mm_to_px(1)
+    text_pad_left = 0  # CSS: padding-left: 0
+
+    text_x = qr_container_w + text_pad_left
+    text_y = text_pad_top
+    text_w = width_px - qr_container_w - text_pad_left - text_pad_right
+    text_h = height_px - text_pad_top - text_pad_bottom
+
     font = _try_load_font(text_size_px)
     _draw_wrapped_text(
         draw, label_text, font,
-        content_x + qr_width, content_y, content_w - qr_width,
-        content_h, content_y, text_size_px,
+        text_x, text_y, text_w, text_h, text_size_px,
     )
 
     buf = io.BytesIO()
