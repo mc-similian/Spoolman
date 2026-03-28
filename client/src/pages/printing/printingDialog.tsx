@@ -111,17 +111,20 @@ const PrintingDialog = ({
     : {};
 
   const printToHost = async () => {
-    const pages = document.querySelectorAll(".print-page");
-    if (pages.length === 0) {
+    const items = document.querySelectorAll(".print-page-item");
+    if (items.length === 0) {
       messageApi.error(t("printing.generic.noPages"));
       return;
     }
 
     messageApi.loading(t("printing.generic.sendingToHost"));
 
-    for (let i = 0; i < pages.length; i++) {
+    for (let i = 0; i < items.length; i++) {
+      // Skip empty placeholder items (from skipItems)
+      if (items[i].children.length === 0) continue;
+
       try {
-        const dataUrl = await htmlToImage.toPng(pages[i] as HTMLElement, {
+        const dataUrl = await htmlToImage.toPng(items[i] as HTMLElement, {
           backgroundColor: "#FFF",
           cacheBust: true,
           pixelRatio: 2,
