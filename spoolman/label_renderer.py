@@ -162,10 +162,14 @@ def _generate_qr_code(value: str, size_px: int) -> Image.Image:
 def _try_load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     """Try to load a system font, fall back to default."""
     font_paths = [
+        # Roboto matches the browser's CSS font-family stack
+        "/usr/share/fonts/truetype/roboto/unhinted/RobotoTTF/Roboto-Regular.ttf",
+        "/usr/share/fonts/truetype/roboto/hinted/RobotoTTF/Roboto-Regular.ttf",
+        "/usr/share/fonts/truetype/roboto/Roboto-Regular.ttf",
+        # Fallbacks
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
         "/usr/share/fonts/TTF/DejaVuSans.ttf",
-        "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
     ]
     for path in font_paths:
