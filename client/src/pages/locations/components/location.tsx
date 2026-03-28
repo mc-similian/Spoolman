@@ -40,6 +40,7 @@ export function Location({
   const [newTitle, setNewTitle] = useState(title);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
+  const lastScannedId = useRef<number | null>(null);
   const [messageApi, contextHolder] = message.useMessage();
   const { mutate: updateSpool } = useUpdate({
     resource: "spool",
@@ -60,7 +61,9 @@ export function Location({
     const raw = detectedCodes[0].rawValue;
     const spoolId = extractSpoolId(raw);
     if (spoolId === null) return;
+    if (spoolId === lastScannedId.current) return;
 
+    lastScannedId.current = spoolId;
     const locationValue = title === EMPTYLOC ? "" : title;
     updateSpool(
       {
@@ -218,7 +221,7 @@ export function Location({
       <Modal
         open={scannerOpen}
         destroyOnHidden
-        onCancel={() => setScannerOpen(false)}
+        onCancel={() => { setScannerOpen(false); lastScannedId.current = null; }}
         footer={null}
         title={t("locations.scanner.title", { location: title === EMPTYLOC ? t("locations.no_location") : title })}
       >
