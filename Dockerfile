@@ -42,6 +42,7 @@ LABEL org.opencontainers.image.licenses=MIT
 RUN apt-get update && apt-get install -y \
     gosu \
     cups-client \
+    fonts-dejavu-core \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
