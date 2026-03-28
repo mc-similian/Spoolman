@@ -11,6 +11,11 @@ usermod -o -u "$PUID" app
 echo User UID: $(id -u app)
 echo User GID: $(id -g app)
 
+# Fix permissions on USB printer device if present
+for dev in /dev/usb/lp*; do
+    [ -e "$dev" ] && chmod 666 "$dev" && echo "Enabled access to $dev"
+done
+
 echo "Starting uvicorn..."
 
 # Execute the uvicorn command with any additional arguments
