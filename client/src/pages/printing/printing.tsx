@@ -27,6 +27,7 @@ export interface QRCodePrintSettings {
 
 export interface SpoolQRCodePrintSettings {
   template?: string;
+  useHTTPUrl?: boolean;
   labelSettings: QRCodePrintSettings;
 }
 

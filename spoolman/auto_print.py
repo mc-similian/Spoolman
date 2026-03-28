@@ -90,6 +90,7 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
 
         # Extract preset parameters
         template = preset.get("template", DEFAULT_TEMPLATE)
+        use_http_url = preset.get("useHTTPUrl", False)
         label_settings = preset.get("labelSettings", {})
         show_qr_code = label_settings.get("showQRCodeMode", "withIcon")
         text_size_mm = label_settings.get("textSize", 3.0)
@@ -114,8 +115,6 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
             paper_width, paper_height = paper_dimensions[paper_size]
 
         margin = print_settings.get("margin", {"top": 2, "bottom": 2, "left": 2, "right": 2})
-        margin_vals = [margin.get("top", 2), margin.get("bottom", 2), margin.get("left", 2), margin.get("right", 2)]
-        avg_margin = sum(margin_vals) / len(margin_vals)
 
         # Convert DB model to pydantic model for template rendering
         spool_pydantic = Spool.from_db(spool_db_item)
@@ -129,8 +128,12 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
             text_size_mm=text_size_mm,
             paper_width_mm=paper_width,
             paper_height_mm=paper_height,
-            margin_mm=avg_margin,
             base_url=base_url,
+            use_http_url=use_http_url,
+            margin_top_mm=margin.get("top", 2),
+            margin_bottom_mm=margin.get("bottom", 2),
+            margin_left_mm=margin.get("left", 2),
+            margin_right_mm=margin.get("right", 2),
         )
 
         # Print the label (subprocess call, run in thread to avoid blocking event loop)

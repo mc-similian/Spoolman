@@ -233,6 +233,10 @@ def render_label(
     base_url: str = "",
     *,
     use_http_url: bool = False,
+    margin_top_mm: float | None = None,
+    margin_bottom_mm: float | None = None,
+    margin_left_mm: float | None = None,
+    margin_right_mm: float | None = None,
 ) -> bytes:
     """Render a label as a PNG image.
 
@@ -243,9 +247,13 @@ def render_label(
         text_size_mm: Text size in mm.
         paper_width_mm: Paper width in mm.
         paper_height_mm: Paper height in mm.
-        margin_mm: Margin in mm.
+        margin_mm: Fallback margin in mm (used if individual margins not set).
         base_url: Base URL for QR codes.
         use_http_url: If True, use HTTP URL format; otherwise use WEB+SPOOLMAN protocol.
+        margin_top_mm: Top margin in mm (overrides margin_mm).
+        margin_bottom_mm: Bottom margin in mm (overrides margin_mm).
+        margin_left_mm: Left margin in mm (overrides margin_mm).
+        margin_right_mm: Right margin in mm (overrides margin_mm).
 
     Returns:
         PNG image data as bytes.
@@ -253,8 +261,12 @@ def render_label(
     """
     width_px = mm_to_px(paper_width_mm)
     height_px = mm_to_px(paper_height_mm)
-    margin_px = mm_to_px(margin_mm)
     text_size_px = max(mm_to_px(text_size_mm), 8)
+
+    m_top = mm_to_px(margin_top_mm if margin_top_mm is not None else margin_mm)
+    m_bottom = mm_to_px(margin_bottom_mm if margin_bottom_mm is not None else margin_mm)
+    m_left = mm_to_px(margin_left_mm if margin_left_mm is not None else margin_mm)
+    m_right = mm_to_px(margin_right_mm if margin_right_mm is not None else margin_mm)
 
     img = Image.new("RGB", (width_px, height_px), "white")
     draw = ImageDraw.Draw(img)
@@ -262,10 +274,10 @@ def render_label(
     spool_data = _spool_to_template_data(spool_pydantic)
     label_text = _substitute_template(template, spool_data)
 
-    content_x = margin_px
-    content_y = margin_px
-    content_w = width_px - 2 * margin_px
-    content_h = height_px - 2 * margin_px
+    content_x = m_left
+    content_y = m_top
+    content_w = width_px - m_left - m_right
+    content_h = height_px - m_top - m_bottom
 
     # Generate QR code if enabled
     qr_width = 0

@@ -31,7 +31,8 @@ const SpoolQRCodePrintingDialog = ({ spoolIds }: SpoolQRCodePrintingDialog) => {
       ? JSON.parse(baseUrlSetting.data?.value)
       : window.location.origin;
   const [messageApi, contextHolder] = message.useMessage();
-  const [useHTTPUrl, setUseHTTPUrl] = useSavedState("print-useHTTPUrl", false);
+  // Read useHTTPUrl from the preset (with localStorage fallback for migration)
+  const [useHTTPUrlLegacy] = useSavedState("print-useHTTPUrl", false);
 
   const itemQueries = useGetSpoolsByIds(spoolIds);
   const items = itemQueries
@@ -150,6 +151,13 @@ const SpoolQRCodePrintingDialog = ({ spoolIds }: SpoolQRCodePrintingDialog) => {
       }
     }
   }
+
+  // Read useHTTPUrl from the current preset, falling back to legacy localStorage value
+  const useHTTPUrl = curPreset.useHTTPUrl ?? useHTTPUrlLegacy;
+  const setUseHTTPUrl = (value: boolean) => {
+    curPreset.useHTTPUrl = value;
+    updateCurrentPreset(curPreset);
+  };
 
   const [templateHelpOpen, setTemplateHelpOpen] = useState(false);
   const template =
