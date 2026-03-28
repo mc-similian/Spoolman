@@ -170,6 +170,8 @@ def _png_to_tspl(
         f"SPEED {speed}\n"
         f"DENSITY {density}\n"
         f"DIRECTION {direction}\n"
+        "SET TEAR ON\n"
+        "OFFSET 0 mm\n"
         "CLS\n"
         f"BITMAP 0,0,{width_bytes},{label_height_dots},0,"
     )
