@@ -276,6 +276,15 @@ def print_image(
     """
     opts = options or {}
 
+    # Save source PNG for debugging
+    debug_dir = Path("/home/app/.local/share/spoolman")
+    try:
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        (debug_dir / "last_label.png").write_bytes(image_data)
+        logger.info("Debug PNG saved to %s", debug_dir / "last_label.png")
+    except Exception:
+        logger.warning("Could not save debug PNG")
+
     # Set default label dimensions from image if not in options
     if "label_width_mm" not in opts or "label_height_mm" not in opts:
         img = Image.open(io.BytesIO(image_data))
