@@ -129,18 +129,24 @@ def _get_default_cups_printer() -> str | None:
 
 def _png_to_tspl(
     image_data: bytes,
-    label_width_mm: float,
-    label_height_mm: float,
-    speed: int = DEFAULT_SPEED,
-    density: int = DEFAULT_DENSITY,
-    gap_mm: float = DEFAULT_GAP_MM,
-    direction: int = DEFAULT_DIRECTION,
+    tspl_options: dict,
 ) -> bytes:
     """Convert a PNG image to TSPL commands with BITMAP data.
 
     The image is resized to fit the label dimensions at 203 DPI,
     converted to 1-bit monochrome, and encoded as a TSPL BITMAP command.
+
+    All TSPL settings are read from tspl_options dict.
     """
+    label_width_mm = float(tspl_options.get("label_width_mm", 40))
+    label_height_mm = float(tspl_options.get("label_height_mm", 30))
+    speed = int(tspl_options.get("speed", DEFAULT_SPEED))
+    density = int(tspl_options.get("density", DEFAULT_DENSITY))
+    gap_mm = float(tspl_options.get("gap_mm", DEFAULT_GAP_MM))
+    direction = int(tspl_options.get("direction", DEFAULT_DIRECTION))
+    offset_mm = float(tspl_options.get("offset_mm", 0))
+    tear = tspl_options.get("tear", "ON").upper()
+
     dots_per_mm = 8  # 203 DPI ≈ 8 dots/mm
     label_width_dots = int(label_width_mm * dots_per_mm)
     label_height_dots = int(label_height_mm * dots_per_mm)
@@ -170,6 +176,8 @@ def _png_to_tspl(
         f"SPEED {speed}\n"
         f"DENSITY {density}\n"
         f"DIRECTION {direction}\n"
+        f"SET TEAR {tear}\n"
+        f"OFFSET {offset_mm} mm\n"
         "CLS\n"
         f"BITMAP 0,0,{width_bytes},{label_height_dots},0,"
     )
@@ -257,32 +265,16 @@ def print_image(
     """
     opts = options or {}
 
-    # Extract TSPL settings
-    speed = int(opts.get("speed", DEFAULT_SPEED))
-    density = int(opts.get("density", DEFAULT_DENSITY))
-    gap_mm = float(opts.get("gap_mm", DEFAULT_GAP_MM))
-    direction = int(opts.get("direction", DEFAULT_DIRECTION))
+    # Set default label dimensions from image if not in options
+    if "label_width_mm" not in opts or "label_height_mm" not in opts:
+        img = Image.open(io.BytesIO(image_data))
+        img_width, img_height = img.size
+        dots_per_mm = 8
+        opts.setdefault("label_width_mm", img_width / dots_per_mm)
+        opts.setdefault("label_height_mm", img_height / dots_per_mm)
 
-    # Get label dimensions from options or from the image itself
-    img = Image.open(io.BytesIO(image_data))
-    img_width, img_height = img.size
-    dots_per_mm = 8
-    default_width = img_width / dots_per_mm
-    default_height = img_height / dots_per_mm
-
-    label_width_mm = float(opts.get("label_width_mm", default_width))
-    label_height_mm = float(opts.get("label_height_mm", default_height))
-
-    # Convert PNG to TSPL
-    tspl_data = _png_to_tspl(
-        image_data,
-        label_width_mm=label_width_mm,
-        label_height_mm=label_height_mm,
-        speed=speed,
-        density=density,
-        gap_mm=gap_mm,
-        direction=direction,
-    )
+    # Convert PNG to TSPL — all settings come from opts
+    tspl_data = _png_to_tspl(image_data, opts)
 
     # Determine print method
     use_usb = False
