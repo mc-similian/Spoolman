@@ -114,7 +114,10 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
         else:
             paper_width, paper_height = paper_dimensions[paper_size]
 
+        show_content = label_settings.get("showContent", True)
+
         margin = print_settings.get("margin", {"top": 2, "bottom": 2, "left": 2, "right": 2})
+        printer_margin = print_settings.get("printerMargin", {"top": 5, "bottom": 5, "left": 5, "right": 5})
         spacing = print_settings.get("spacing", {"horizontal": 0, "vertical": 0})
         columns = print_settings.get("columns", 1)
         rows = print_settings.get("rows", 1)
@@ -132,6 +135,15 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
         item_width = (paper_width - margin_left - margin_right - spacing_h) / columns - spacing_h
         item_height = (paper_height - margin_top - margin_bottom - spacing_v) / rows - spacing_v
 
+        # Subtract printerMargin padding (matches printingDialog.tsx for first row/column items):
+        # paddingLeft = Math.max(printerMargin.left - margin.left, 0)
+        # paddingTop = Math.max(printerMargin.top - margin.top, 0)
+        # etc.
+        pm_left = max(printer_margin.get("left", 5) - margin_left, 0)
+        pm_right = max(printer_margin.get("right", 5) - margin_right, 0)
+        pm_top = max(printer_margin.get("top", 5) - margin_top, 0)
+        pm_bottom = max(printer_margin.get("bottom", 5) - margin_bottom, 0)
+
         # Convert DB model to pydantic model for template rendering
         spool_pydantic = Spool.from_db(spool_db_item)
 
@@ -139,13 +151,17 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
         image_data = await asyncio.to_thread(
             render_label,
             spool_pydantic=spool_pydantic,
-            template=template,
+            template=template if show_content else "",
             show_qr_code=show_qr_code,
             text_size_mm=text_size_mm,
             item_width_mm=item_width,
             item_height_mm=item_height,
             base_url=base_url,
             use_http_url=use_http_url,
+            padding_top=pm_top,
+            padding_bottom=pm_bottom,
+            padding_left=pm_left,
+            padding_right=pm_right,
         )
 
         # Print the label (subprocess call, run in thread to avoid blocking event loop)

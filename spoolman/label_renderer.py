@@ -177,7 +177,7 @@ def _try_load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def _render_qr(img: Image.Image, spool_pydantic, base_url: str, width_px: int, height_px: int, *, use_http_url: bool = False) -> int:  # noqa: ANN001, E501
+def _render_qr(img: Image.Image, spool_pydantic, base_url: str, content_x: int, content_y: int, content_w: int, content_h: int, *, use_http_url: bool = False) -> int:  # noqa: ANN001, E501
     """Render QR code onto the image matching the CSS layout.
 
     CSS layout replicated:
@@ -185,7 +185,7 @@ def _render_qr(img: Image.Image, spool_pydantic, base_url: str, width_px: int, h
     - .print-qrcode: padding: 2mm; object-fit: contain; width/height: 100%
 
     The QR code gets 2mm padding on all sides. The container is at most 50% of
-    the total width. The QR is square and fits within the padded area.
+    the content width. The QR is square and fits within the padded area.
 
     Returns the total width consumed by the QR container (QR + padding).
     """
@@ -196,11 +196,11 @@ def _render_qr(img: Image.Image, spool_pydantic, base_url: str, width_px: int, h
         qr_value = f"WEB+SPOOLMAN:S-{spool_id}"
 
     qr_padding = mm_to_px(2)
-    max_container_w = width_px // 2
+    max_container_w = content_w // 2
 
     # Available space for QR inside padding
     available_w = max_container_w - 2 * qr_padding
-    available_h = height_px - 2 * qr_padding
+    available_h = content_h - 2 * qr_padding
 
     # QR is square, constrained by the smaller dimension
     qr_size = min(available_w, available_h)
@@ -209,8 +209,8 @@ def _render_qr(img: Image.Image, spool_pydantic, base_url: str, width_px: int, h
 
     qr_img = _generate_qr_code(qr_value, qr_size)
 
-    # Place QR at top-left with padding (matching CSS: aligned to top)
-    img.paste(qr_img, (qr_padding, qr_padding))
+    # Place QR at top-left of content area with padding (matching CSS: aligned to top)
+    img.paste(qr_img, (content_x + qr_padding, content_y + qr_padding))
 
     # Container width shrinks to fit: QR + 2*padding
     container_w = qr_size + 2 * qr_padding
@@ -263,14 +263,10 @@ def render_label(
     base_url: str = "",
     *,
     use_http_url: bool = False,
-    # Legacy parameters (ignored, kept for backwards compatibility)
-    paper_width_mm: float = 62.0,  # noqa: ARG001
-    paper_height_mm: float = 29.0,  # noqa: ARG001
-    margin_mm: float = 2.0,  # noqa: ARG001
-    margin_top_mm: float | None = None,  # noqa: ARG001
-    margin_bottom_mm: float | None = None,  # noqa: ARG001
-    margin_left_mm: float | None = None,  # noqa: ARG001
-    margin_right_mm: float | None = None,  # noqa: ARG001
+    padding_top: float = 0,
+    padding_bottom: float = 0,
+    padding_left: float = 0,
+    padding_right: float = 0,
 ) -> bytes:
     """Render a label as a PNG image matching the frontend CSS layout.
 
@@ -291,6 +287,10 @@ def render_label(
         item_height_mm: Height of the label content area in mm.
         base_url: Base URL for QR codes.
         use_http_url: If True, use HTTP URL format; otherwise use WEB+SPOOLMAN protocol.
+        padding_top: Printer margin padding in mm (from printerMargin - margin).
+        padding_bottom: Printer margin padding in mm.
+        padding_left: Printer margin padding in mm.
+        padding_right: Printer margin padding in mm.
 
     Returns:
         PNG image data as bytes.
@@ -299,6 +299,18 @@ def render_label(
     width_px = mm_to_px(item_width_mm)
     height_px = mm_to_px(item_height_mm)
     text_size_px = max(mm_to_px(text_size_mm), 8)
+
+    # Printer margin padding (matches printingDialog.tsx .print-page-item padding)
+    pad_top = mm_to_px(padding_top)
+    pad_bottom = mm_to_px(padding_bottom)
+    pad_left = mm_to_px(padding_left)
+    pad_right = mm_to_px(padding_right)
+
+    # Content area after printer margin padding
+    content_x = pad_left
+    content_y = pad_top
+    content_w = width_px - pad_left - pad_right
+    content_h = height_px - pad_top - pad_bottom
 
     img = Image.new("RGB", (width_px, height_px), "white")
     draw = ImageDraw.Draw(img)
@@ -310,26 +322,27 @@ def render_label(
     qr_container_w = 0
     if show_qr_code != "no":
         qr_container_w = _render_qr(
-            img, spool_pydantic, base_url, width_px, height_px,
+            img, spool_pydantic, base_url, content_x, content_y, content_w, content_h,
             use_http_url=use_http_url,
         )
 
     # Text section (matches CSS: .print-qrcode-title p { padding: 1mm 1mm 1mm 0 })
-    text_pad_top = mm_to_px(1)
-    text_pad_right = mm_to_px(1)
-    text_pad_bottom = mm_to_px(1)
-    text_pad_left = 0  # CSS: padding-left: 0
+    if label_text.strip():
+        text_pad_top = mm_to_px(1)
+        text_pad_right = mm_to_px(1)
+        text_pad_bottom = mm_to_px(1)
+        text_pad_left = 0  # CSS: padding-left: 0
 
-    text_x = qr_container_w + text_pad_left
-    text_y = text_pad_top
-    text_w = width_px - qr_container_w - text_pad_left - text_pad_right
-    text_h = height_px - text_pad_top - text_pad_bottom
+        text_x = content_x + qr_container_w + text_pad_left
+        text_y = content_y + text_pad_top
+        text_w = content_w - qr_container_w - text_pad_left - text_pad_right
+        text_h = content_h - text_pad_top - text_pad_bottom
 
-    font = _try_load_font(text_size_px)
-    _draw_wrapped_text(
-        draw, label_text, font,
-        text_x, text_y, text_w, text_h, text_size_px,
-    )
+        font = _try_load_font(text_size_px)
+        _draw_wrapped_text(
+            draw, label_text, font,
+            text_x, text_y, text_w, text_h, text_size_px,
+        )
 
     buf = io.BytesIO()
     img.save(buf, format="PNG", dpi=(RENDER_DPI, RENDER_DPI))
