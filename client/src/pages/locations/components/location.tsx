@@ -1,10 +1,11 @@
-import { Button, Input, theme } from "antd";
+import { Button, Input, Modal, Space, message, theme } from "antd";
 import type { Identifier, XYCoord } from "dnd-core";
 import { useRef, useState } from "react";
 import { DragSourceMonitor, useDrag, useDrop } from "react-dnd";
 
-import { DeleteOutlined } from "@ant-design/icons";
+import { CameraOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useTranslate, useUpdate } from "@refinedev/core";
+import { IDetectedBarcode, Scanner } from "@yudiel/react-qr-scanner";
 import { ISpool } from "../../spools/model";
 import { DragItem, ItemTypes, SpoolDragItem } from "../dnd";
 import { EMPTYLOC } from "../functions";
@@ -37,11 +38,42 @@ export function Location({
   const t = useTranslate();
   const [editTitle, setEditTitle] = useState(false);
   const [newTitle, setNewTitle] = useState(title);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerError, setScannerError] = useState<string | null>(null);
+  const [messageApi, contextHolder] = message.useMessage();
   const { mutate: updateSpool } = useUpdate({
     resource: "spool",
     mutationMode: "optimistic",
     successNotification: false,
   });
+
+  const extractSpoolId = (raw: string): number | null => {
+    const match = raw.match(/^web\+spoolman:s-(?<id>[0-9]+)$/i);
+    if (match?.groups) return parseInt(match.groups.id, 10);
+    const urlMatch = raw.match(/^https?:\/\/[^/]+\/spool\/show\/(?<id>[0-9]+)$/i);
+    if (urlMatch?.groups) return parseInt(urlMatch.groups.id, 10);
+    return null;
+  };
+
+  const onScanForLocation = (detectedCodes: IDetectedBarcode[]) => {
+    if (detectedCodes.length === 0) return;
+    const raw = detectedCodes[0].rawValue;
+    const spoolId = extractSpoolId(raw);
+    if (spoolId === null) return;
+
+    const locationValue = title === EMPTYLOC ? "" : title;
+    updateSpool(
+      {
+        id: spoolId,
+        values: { location: locationValue },
+      },
+      {
+        onSuccess: () => {
+          messageApi.success(t("locations.scanner.success", { id: spoolId }));
+        },
+      }
+    );
+  };
 
   const moveSpoolLocation = (spool_id: number, location: string) => {
     updateSpool({
@@ -177,8 +209,54 @@ export function Location({
             {<span style={spoolCountStyle}> ({spools.length})</span>}
           </span>
         )}
-        {showDelete && <Button icon={<DeleteOutlined />} size="small" type="text" onClick={onDelete} />}
+        <span>
+          <Button icon={<CameraOutlined />} size="small" type="text" onClick={() => setScannerOpen(true)} />
+          {showDelete && <Button icon={<DeleteOutlined />} size="small" type="text" onClick={onDelete} />}
+        </span>
       </h3>
+      {contextHolder}
+      <Modal
+        open={scannerOpen}
+        destroyOnHidden
+        onCancel={() => setScannerOpen(false)}
+        footer={null}
+        title={t("locations.scanner.title", { location: title === EMPTYLOC ? t("locations.no_location") : title })}
+      >
+        <Space direction="vertical" style={{ width: "100%" }}>
+          <p>{t("locations.scanner.description")}</p>
+          <Scanner
+            constraints={{ facingMode: "environment" }}
+            onScan={onScanForLocation}
+            formats={["qr_code"]}
+            onError={(err: unknown) => {
+              const error = err as Error;
+              console.error(error);
+              if (error.name === "NotAllowedError") {
+                setScannerError(t("scanner.error.notAllowed"));
+              } else if (
+                error.name === "InsecureContextError" ||
+                (location.protocol !== "https:" && navigator.mediaDevices === undefined)
+              ) {
+                setScannerError(t("scanner.error.insecureContext"));
+              } else if (error.name === "StreamApiNotSupportedError") {
+                setScannerError(t("scanner.error.streamApiNotSupported"));
+              } else if (error.name === "NotReadableError") {
+                setScannerError(t("scanner.error.notReadable"));
+              } else if (error.name === "NotFoundError") {
+                setScannerError(t("scanner.error.notFound"));
+              } else {
+                setScannerError(t("scanner.error.unknown", { error: error.name }));
+              }
+            }}
+          >
+            {scannerError && (
+              <div style={{ position: "absolute", textAlign: "center", width: "100%", top: "50%" }}>
+                <p>{scannerError}</p>
+              </div>
+            )}
+          </Scanner>
+        </Space>
+      </Modal>
       <SpoolList spools={spools} spoolOrder={locationSpoolOrder} setSpoolOrder={setLocationSpoolOrder} />
     </div>
   );

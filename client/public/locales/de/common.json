@@ -452,6 +452,11 @@
         "no_location": "Kein Ort",
         "no_locations_help": "Diese Seite lässt Sie Ihre Spulen zu Orten zuweisen, fügen Sie ein paar Spulen hinzu um loszulegen!",
         "locations": "Orte",
-        "new_location": "Neuer Ort"
+        "new_location": "Neuer Ort",
+        "scanner": {
+            "title": "Spulen scannen nach {{location}}",
+            "description": "Scanne einen Spulen-QR-Code, um die Spule zu diesem Ort zu verschieben.",
+            "success": "Spule #{{id}} erfolgreich verschoben."
+        }
     }
 }

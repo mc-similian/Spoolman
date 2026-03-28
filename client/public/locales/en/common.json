@@ -440,6 +440,11 @@
         "locations": "Locations",
         "new_location": "New Location",
         "no_location": "No Location",
-        "no_locations_help": "This page lets you organize your spools in locations, add some spools to get started!"
+        "no_locations_help": "This page lets you organize your spools in locations, add some spools to get started!",
+        "scanner": {
+            "title": "Scan spools to {{location}}",
+            "description": "Scan a spool QR code to move it to this location.",
+            "success": "Spool #{{id}} moved successfully."
+        }
     }
 }
