@@ -242,7 +242,7 @@ export function GeneralSettings() {
             >
               <Input.TextArea
                 rows={3}
-                placeholder='{"media": "Custom.62x29mm", "fit-to-page": ""}'
+                placeholder='{"speed": 2, "density": 6, "gap_mm": 2}'
               />
             </Form.Item>
 
