@@ -184,7 +184,18 @@ def _png_to_tspl(
 
     footer = b"\nPRINT 1,1\n"
 
-    return header.encode("ascii") + raw_data + footer
+    tspl_bytes = header.encode("ascii") + raw_data + footer
+
+    # Always save last TSPL output for debugging
+    debug_path = Path("/home/app/.local/share/spoolman/last_label.tspl")
+    try:
+        debug_path.parent.mkdir(parents=True, exist_ok=True)
+        debug_path.write_bytes(tspl_bytes)
+        logger.info("TSPL debug file saved to %s (%d bytes)", debug_path, len(tspl_bytes))
+    except Exception:
+        logger.warning("Could not save TSPL debug file")
+
+    return tspl_bytes
 
 
 def _print_via_usb(tspl_data: bytes, device_path: str, copies: int = 1) -> str:
