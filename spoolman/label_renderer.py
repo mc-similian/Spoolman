@@ -341,15 +341,6 @@ def render_label(
     content_w = width_px - pad_left - pad_right
     content_h = height_px - pad_top - pad_bottom
 
-    logger.info(
-        "render_label: item=%.1fx%.1fmm (%dx%dpx), text_size=%.1fmm (%dpx), "
-        "padding=%.1f/%.1f/%.1f/%.1f, content=%dx%dpx, qr=%s",
-        item_width_mm, item_height_mm, width_px, height_px,
-        text_size_mm, text_size_px,
-        padding_top, padding_right, padding_bottom, padding_left,
-        content_w, content_h, show_qr_code,
-    )
-
     img = Image.new("RGB", (width_px, height_px), "white")
     draw = ImageDraw.Draw(img)
 

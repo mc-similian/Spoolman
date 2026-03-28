@@ -147,7 +147,7 @@ def _png_to_tspl(
     offset_mm = float(tspl_options.get("offset_mm", 0))
     tear = tspl_options.get("tear", "ON").upper()
 
-    dots_per_mm = 8  # 203 DPI ≈ 8 dots/mm
+    dots_per_mm = int(tspl_options.get("dots_per_mm", 8))  # 203 DPI ≈ 8 dots/mm
     label_width_dots = int(label_width_mm * dots_per_mm)
     label_height_dots = int(label_height_mm * dots_per_mm)
 
@@ -184,18 +184,7 @@ def _png_to_tspl(
 
     footer = b"\nPRINT 1,1\n"
 
-    tspl_bytes = header.encode("ascii") + raw_data + footer
-
-    # Always save last TSPL output for debugging
-    debug_path = Path("/home/app/.local/share/spoolman/last_label.tspl")
-    try:
-        debug_path.parent.mkdir(parents=True, exist_ok=True)
-        debug_path.write_bytes(tspl_bytes)
-        logger.info("TSPL debug file saved to %s (%d bytes)", debug_path, len(tspl_bytes))
-    except Exception:
-        logger.warning("Could not save TSPL debug file")
-
-    return tspl_bytes
+    return header.encode("ascii") + raw_data + footer
 
 
 def _print_via_usb(tspl_data: bytes, device_path: str, copies: int = 1) -> str:
@@ -276,22 +265,13 @@ def print_image(
     """
     opts = options or {}
 
-    # Save source PNG for debugging
-    debug_dir = Path("/home/app/.local/share/spoolman")
-    try:
-        debug_dir.mkdir(parents=True, exist_ok=True)
-        (debug_dir / "last_label.png").write_bytes(image_data)
-        logger.info("Debug PNG saved to %s", debug_dir / "last_label.png")
-    except Exception:
-        logger.warning("Could not save debug PNG")
-
     # Set default label dimensions from image if not in options
     if "label_width_mm" not in opts or "label_height_mm" not in opts:
         img = Image.open(io.BytesIO(image_data))
         img_width, img_height = img.size
-        dots_per_mm = 8
-        opts.setdefault("label_width_mm", img_width / dots_per_mm)
-        opts.setdefault("label_height_mm", img_height / dots_per_mm)
+        dpm = int(opts.get("dots_per_mm", 8))
+        opts.setdefault("label_width_mm", img_width / dpm)
+        opts.setdefault("label_height_mm", img_height / dpm)
 
     # Convert PNG to TSPL — all settings come from opts
     tspl_data = _png_to_tspl(image_data, opts)
