@@ -123,8 +123,21 @@ const PrintingDialog = ({
       // Skip empty placeholder items (from skipItems)
       if (items[i].children.length === 0) continue;
 
+      const el = items[i] as HTMLElement;
+
+      // Temporarily remove border and padding for capture — these are for
+      // on-screen preview only and would shift the content in the printed image.
+      const origBorder = el.style.border;
+      const origPadding = el.style.padding;
+      const origPaddingTop = el.style.paddingTop;
+      const origPaddingRight = el.style.paddingRight;
+      const origPaddingBottom = el.style.paddingBottom;
+      const origPaddingLeft = el.style.paddingLeft;
+      el.style.border = "none";
+      el.style.padding = "0";
+
       try {
-        const dataUrl = await htmlToImage.toPng(items[i] as HTMLElement, {
+        const dataUrl = await htmlToImage.toPng(el, {
           backgroundColor: "#FFF",
           cacheBust: true,
           pixelRatio: 2,
@@ -143,6 +156,14 @@ const PrintingDialog = ({
           `${t("printing.generic.hostPrintError")}: ${error instanceof Error ? error.message : String(error)}`
         );
         return;
+      } finally {
+        // Restore original styles
+        el.style.border = origBorder;
+        el.style.padding = origPadding;
+        el.style.paddingTop = origPaddingTop;
+        el.style.paddingRight = origPaddingRight;
+        el.style.paddingBottom = origPaddingBottom;
+        el.style.paddingLeft = origPaddingLeft;
       }
     }
 
