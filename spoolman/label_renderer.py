@@ -182,7 +182,7 @@ def _render_qr(img: Image.Image, spool_pydantic, base_url: str, content_x: int, 
         return 0
     qr_img = _generate_qr_code(qr_value, qr_size)
 
-    qr_y = content_y + (content_h - qr_size) // 2
+    qr_y = content_y
     img.paste(qr_img, (content_x, qr_y))
     return qr_size + mm_to_px(2)
 
