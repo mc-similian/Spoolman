@@ -390,7 +390,7 @@
             },
             "printer_options": {
                 "label": "Druckeroptionen",
-                "tooltip": "JSON-Objekt mit TSPL-Druckoptionen. Optionen: speed (1-6, niedriger=langsamer/bessere Qualität), density (0-15, Hitzeintensität), gap_mm (Abstand zwischen Labels in mm), direction (0 oder 1). Labelgröße wird aus dem Druckpreset übernommen.",
+                "tooltip": "JSON-Objekt mit TSPL-Druckoptionen. Optionen: speed (1-6), density (0-15), gap_mm (Abstand zwischen Labels), offset_mm (vertikaler Versatz), direction (0 oder 1), tear (ON/OFF). Labelgröße wird aus dem Druckpreset übernommen.",
                 "invalidJson": "Ungültiges JSON-Format"
             },
             "cups_not_available": "CUPS ist auf dem Server nicht verfügbar. Stelle sicher, dass cups-client im Container installiert ist und die Umgebungsvariable CUPS_SERVER auf deinen CUPS-Server zeigt.",
