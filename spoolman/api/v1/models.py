@@ -197,10 +197,27 @@ class Filament(BaseModel):
             "Query the /fields endpoint for more details about the fields."
         ),
     )
+    total_remaining_weight: float | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Total estimated remaining weight of filament across all spools of this type, in grams. "
+            "Only set if the spools relationship is loaded."
+        ),
+    )
 
     @staticmethod
     def from_db(item: models.Filament) -> "Filament":
         """Create a new Pydantic filament object from a database filament object."""
+        total_remaining_weight: float | None = None
+        if "spools" in item.__dict__:
+            total_remaining_weight = 0.0
+            for spool in item.spools:
+                if spool.initial_weight is not None:
+                    total_remaining_weight += max(spool.initial_weight - spool.used_weight, 0)
+                elif item.weight is not None:
+                    total_remaining_weight += max(item.weight - spool.used_weight, 0)
+
         return Filament(
             id=item.id,
             registered=item.registered,
@@ -223,6 +240,7 @@ class Filament(BaseModel):
             ),
             external_id=item.external_id,
             extra={field.key: field.value for field in item.extra},
+            total_remaining_weight=total_remaining_weight,
         )
 
 

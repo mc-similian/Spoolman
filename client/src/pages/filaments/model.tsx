@@ -19,6 +19,7 @@ export interface IFilament {
   multi_color_hexes?: string;
   multi_color_direction?: string;
   external_id?: string;
+  total_remaining_weight?: number;
   extra: { [key: string]: string };
 }
 

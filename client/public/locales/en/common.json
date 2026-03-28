@@ -232,6 +232,7 @@
             "weight": "Weight",
             "spool_weight": "Spool Weight",
             "article_number": "Article Number",
+            "total_remaining_weight": "Total Remaining",
             "registered": "Registered",
             "comment": "Comment",
             "settings_extruder_temp": "Extruder Temp",

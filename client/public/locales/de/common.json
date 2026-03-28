@@ -243,6 +243,7 @@
             "weight": "Gewicht",
             "spool_weight": "Gewicht Spule",
             "article_number": "Artikelnummer",
+            "total_remaining_weight": "Gesamt verfügbar",
             "registered": "Registriert",
             "comment": "Kommentar",
             "settings_extruder_temp": "Düsentemperatur",

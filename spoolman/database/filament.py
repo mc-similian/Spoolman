@@ -8,7 +8,7 @@ import sqlalchemy
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import contains_eager, joinedload
+from sqlalchemy.orm import contains_eager, joinedload, selectinload
 
 from spoolman.api.v1.models import EventType, Filament, FilamentEvent, MultiColorDirection
 from spoolman.database import models, vendor
@@ -116,6 +116,7 @@ async def find(
     stmt = (
         select(models.Filament)
         .options(contains_eager(models.Filament.vendor))
+        .options(selectinload(models.Filament.spools))
         .join(models.Filament.vendor, isouter=True)
     )
 

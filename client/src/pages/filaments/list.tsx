@@ -63,6 +63,7 @@ const allColumns: (keyof IFilamentCollapsed & string)[] = [
   "weight",
   "spool_weight",
   "article_number",
+  "total_remaining_weight",
   "settings_extruder_temp",
   "settings_bed_temp",
   "registered",
@@ -300,6 +301,15 @@ export const FilamentList = () => {
             unit: "g",
             maxDecimals: 0,
             width: 100,
+          }),
+          NumberColumn({
+            ...commonProps,
+            id: "total_remaining_weight",
+            i18ncat: "filament",
+            unit: "g",
+            maxDecimals: 1,
+            width: 130,
+            sorter: false,
           }),
           FilteredQueryColumn({
             ...commonProps,
