@@ -1,4 +1,4 @@
-"""Printer-related endpoints for host-based printing via CUPS."""
+"""Printer-related endpoints for host-based printing via USB or CUPS."""
 
 import json
 import logging
@@ -7,7 +7,7 @@ from fastapi import APIRouter, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 
 from spoolman.api.v1.models import PrinterInfo, PrinterListResponse, PrinterStatusResponse, PrintJobResponse
-from spoolman.printing import check_cups_available, list_printers, print_image
+from spoolman.printing import check_printer_available, list_printers, print_image
 
 router = APIRouter(
     prefix="/printer",
@@ -20,29 +20,25 @@ logger = logging.getLogger(__name__)
 @router.get(
     "/status",
     name="Get printer status",
-    description="Check whether CUPS printing is available on the host.",
+    description="Check whether printing is available (USB device or CUPS).",
     response_model=PrinterStatusResponse,
 )
 async def get_printer_status() -> PrinterStatusResponse:
-    """Return whether CUPS is available."""
-    return PrinterStatusResponse(cups_available=check_cups_available())
+    """Return whether a printer is available."""
+    return PrinterStatusResponse(cups_available=check_printer_available())
 
 
 @router.get(
     "/",
     name="List printers",
-    description="List all available CUPS printers on the host.",
+    description="List all available printers (USB devices and CUPS printers).",
     response_model=PrinterListResponse,
 )
 async def get_printers() -> PrinterListResponse:
     """List available printers."""
-    cups_available = check_cups_available()
-    if not cups_available:
-        return PrinterListResponse(cups_available=False, printers=[])
-
     printers = list_printers()
     return PrinterListResponse(
-        cups_available=True,
+        cups_available=len(printers) > 0,
         printers=[
             PrinterInfo(
                 name=p.name,
@@ -58,24 +54,24 @@ async def get_printers() -> PrinterListResponse:
 @router.post(
     "/print",
     name="Print label",
-    description="Send a label image to a CUPS printer on the host.",
+    description="Send a label image to a printer (USB direct or CUPS).",
     response_model=PrintJobResponse,
     responses={
-        503: {"description": "CUPS is not available on the host."},
+        503: {"description": "No printer available."},
         404: {"description": "The specified printer was not found."},
     },
 )
 async def print_label(
     image: UploadFile = File(..., description="The label image (PNG) to print."),
-    printer_name: str = Form(default="", description="CUPS printer name. Empty string = system default."),
+    printer_name: str = Form(default="", description="Printer name or USB device path. Empty = auto-detect."),
     copies: int = Form(default=1, description="Number of copies to print."),
-    options: str = Form(default="{}", description="JSON-encoded dict of CUPS options."),
+    options: str = Form(default="{}", description="JSON-encoded dict of TSPL print options."),
 ) -> PrintJobResponse | JSONResponse:
-    """Submit a print job to a CUPS printer."""
-    if not check_cups_available():
+    """Submit a print job."""
+    if not check_printer_available():
         return JSONResponse(
             status_code=503,
-            content={"message": "CUPS is not available on this system. Install cups-client in the container."},
+            content={"message": "No printer available. Ensure a USB printer device is accessible or CUPS is configured."},
         )
 
     # Validate printer exists if specified

@@ -10,7 +10,7 @@ from spoolman.api.v1.models import Spool
 from spoolman.database import setting as setting_db
 from spoolman.exceptions import ItemNotFoundError
 from spoolman.label_renderer import render_label
-from spoolman.printing import check_cups_available, print_image
+from spoolman.printing import check_printer_available, print_image
 from spoolman.settings import parse_setting
 
 logger = logging.getLogger(__name__)
@@ -60,8 +60,8 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
             return
 
         # Check if CUPS is available
-        if not check_cups_available():
-            logger.warning("Auto-print skipped: CUPS is not available.")
+        if not check_printer_available():
+            logger.warning("Auto-print skipped: no printer available.")
             return
 
         # Get auto-print settings
