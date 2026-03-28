@@ -90,14 +90,19 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
 
         # Extract preset parameters
         template = preset.get("template", DEFAULT_TEMPLATE)
-        use_http_url = preset.get("useHTTPUrl", False)
+        # If useHTTPUrl is not in preset (legacy), default to True when base_url is configured
+        use_http_url = preset.get("useHTTPUrl", bool(base_url))
         label_settings = preset.get("labelSettings", {})
         show_qr_code = label_settings.get("showQRCodeMode", "withIcon")
         text_size_mm = label_settings.get("textSize", 3.0)
 
+        show_content = label_settings.get("showContent", True)
+
         print_settings = label_settings.get("printSettings", {})
-        paper_size = print_settings.get("paperSize", "custom")
-        custom_paper_size = print_settings.get("customPaperSize", {"width": 62, "height": 29})
+
+        # Defaults must match the frontend (printingDialog.tsx lines 82-90)
+        paper_size = print_settings.get("paperSize", "A4")
+        custom_paper_size = print_settings.get("customPaperSize", {"width": 210, "height": 297})
 
         paper_dimensions = {
             "A3": (297, 420),
@@ -108,19 +113,20 @@ async def auto_print_spool_label(db: AsyncSession, spool_db_item) -> None:  # no
             "Tabloid": (279, 432),
         }
 
-        if paper_size not in paper_dimensions:
-            paper_width = custom_paper_size.get("width", 62)
-            paper_height = custom_paper_size.get("height", 29)
-        else:
+        if paper_size == "custom":
+            paper_width = custom_paper_size.get("width", 210)
+            paper_height = custom_paper_size.get("height", 297)
+        elif paper_size in paper_dimensions:
             paper_width, paper_height = paper_dimensions[paper_size]
+        else:
+            paper_width = custom_paper_size.get("width", 210)
+            paper_height = custom_paper_size.get("height", 297)
 
-        show_content = label_settings.get("showContent", True)
-
-        margin = print_settings.get("margin", {"top": 2, "bottom": 2, "left": 2, "right": 2})
+        margin = print_settings.get("margin", {"top": 10, "bottom": 10, "left": 10, "right": 10})
         printer_margin = print_settings.get("printerMargin", {"top": 5, "bottom": 5, "left": 5, "right": 5})
         spacing = print_settings.get("spacing", {"horizontal": 0, "vertical": 0})
-        columns = print_settings.get("columns", 1)
-        rows = print_settings.get("rows", 1)
+        columns = print_settings.get("columns", 3)
+        rows = print_settings.get("rows", 8)
 
         # Calculate item dimensions exactly like the frontend (printingDialog.tsx):
         # itemWidth = (paperWidth - margin.left - margin.right - spacing.horizontal) / columns - spacing.horizontal

@@ -209,8 +209,9 @@ def _render_qr(img: Image.Image, spool_pydantic, base_url: str, content_x: int, 
 
     qr_img = _generate_qr_code(qr_value, qr_size)
 
-    # Place QR at top-left of content area with padding (matching CSS: aligned to top)
-    img.paste(qr_img, (content_x + qr_padding, content_y + qr_padding))
+    # Center QR vertically (matching CSS: object-fit: contain centers within full-height container)
+    qr_y = content_y + (content_h - qr_size) // 2
+    img.paste(qr_img, (content_x + qr_padding, qr_y))
 
     # Container width shrinks to fit: QR + 2*padding
     container_w = qr_size + 2 * qr_padding

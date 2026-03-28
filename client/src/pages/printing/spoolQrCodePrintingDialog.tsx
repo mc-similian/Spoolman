@@ -152,7 +152,12 @@ const SpoolQRCodePrintingDialog = ({ spoolIds }: SpoolQRCodePrintingDialog) => {
     }
   }
 
-  // Read useHTTPUrl from the current preset, falling back to legacy localStorage value
+  // Read useHTTPUrl from the current preset, falling back to legacy localStorage value.
+  // Auto-migrate: if preset doesn't have it yet, write the legacy value so it gets saved to DB.
+  if (curPreset.useHTTPUrl === undefined && useHTTPUrlLegacy) {
+    curPreset.useHTTPUrl = useHTTPUrlLegacy;
+    updateCurrentPreset(curPreset);
+  }
   const useHTTPUrl = curPreset.useHTTPUrl ?? useHTTPUrlLegacy;
   const setUseHTTPUrl = (value: boolean) => {
     curPreset.useHTTPUrl = value;
