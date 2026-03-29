@@ -309,7 +309,7 @@ export const FilamentList = () => {
             unit: "g",
             maxDecimals: 1,
             width: 130,
-            sorter: false,
+            sorter: true,
           }),
           FilteredQueryColumn({
             ...commonProps,
