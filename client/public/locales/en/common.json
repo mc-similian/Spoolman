@@ -299,7 +299,8 @@
     "home": {
         "home": "Home",
         "welcome": "Welcome to your Spoolman instance!",
-        "description": "It looks like you haven't added any spools yet. See the <helpPageLink>Help page</helpPageLink> for help getting started."
+        "description": "It looks like you haven't added any spools yet. See the <helpPageLink>Help page</helpPageLink> for help getting started.",
+        "top_filaments": "Top 10 Filaments by Remaining Weight"
     },
     "help": {
         "help": "Help",
