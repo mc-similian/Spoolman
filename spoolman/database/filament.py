@@ -5,7 +5,8 @@ from collections.abc import Sequence
 from datetime import datetime
 
 import sqlalchemy
-from sqlalchemy import func, select
+from sqlalchemy import case, func, literal, select
+from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager, joinedload, selectinload
@@ -138,11 +139,40 @@ async def find(
 
     if sort_by is not None:
         for fieldstr, order in sort_by.items():
-            field = parse_nested_field(models.Filament, fieldstr)
-            if order == SortOrder.ASC:
-                stmt = stmt.order_by(field.asc())
-            elif order == SortOrder.DESC:
-                stmt = stmt.order_by(field.desc())
+            if fieldstr == "total_remaining_weight":
+                # Subquery to sum remaining weight across all spools per filament
+                remaining_expr = (
+                    coalesce(models.Spool.initial_weight, models.Filament.weight, literal(0))
+                    - models.Spool.used_weight
+                )
+                clamped_remaining = case(
+                    (remaining_expr > 0, remaining_expr),
+                    else_=literal(0),
+                )
+                remaining_weight_subq = (
+                    select(
+                        models.Spool.filament_id,
+                        func.sum(clamped_remaining).label("total_remaining_weight"),
+                    )
+                    .join(models.Filament, models.Spool.filament_id == models.Filament.id)
+                    .group_by(models.Spool.filament_id)
+                    .subquery()
+                )
+                stmt = stmt.outerjoin(
+                    remaining_weight_subq,
+                    models.Filament.id == remaining_weight_subq.c.filament_id,
+                )
+                sort_col = coalesce(remaining_weight_subq.c.total_remaining_weight, literal(0))
+                if order == SortOrder.ASC:
+                    stmt = stmt.order_by(sort_col.asc())
+                elif order == SortOrder.DESC:
+                    stmt = stmt.order_by(sort_col.desc())
+            else:
+                field = parse_nested_field(models.Filament, fieldstr)
+                if order == SortOrder.ASC:
+                    stmt = stmt.order_by(field.asc())
+                elif order == SortOrder.DESC:
+                    stmt = stmt.order_by(field.desc())
 
     rows = await db.execute(
         stmt,
