@@ -1,4 +1,4 @@
-name: Build and Publish Docker Image
+name: Build, Publish & Deploy
 
 on:
   push:
@@ -17,54 +17,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Install node
-        uses: actions/setup-node@v4.4.0
-        with:
-          node-version: '22'
-
-      - name: Install client dependencies
-        run: |
-          cd client
-          npm ci
-
-      - name: Build client
-        run: |
-          cd client
-          rm -f .env && echo "VITE_APIURL=/api/v1" > .env.production
-          npm run build
-
-      - name: Store git commit and build date
-        run: |
-          echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
-          echo "BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_ENV"
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3.7.0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.12.0
-
-      - name: Log in to the Github Container registry
-        uses: docker/login-action@v3.7.0
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6.19.2
+        uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.GHCR_IMAGE }}:latest
           build-args: |
-            GIT_COMMIT
-            BUILD_DATE
-            REPO_URL=https://github.com/${{ github.repository }}
-          cache-from: |
-            type=registry,ref=${{ env.GHCR_IMAGE }}:buildcache
-          cache-to: |
-            type=registry,ref=${{ env.GHCR_IMAGE }}:buildcache,mode=max
+            GIT_COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+
+  deploy:
+    needs: build-and-publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            docker compose pull
+            docker compose up -d

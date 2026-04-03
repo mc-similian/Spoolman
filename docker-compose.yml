@@ -1,0 +1,15 @@
+services:
+  spoolman:
+    image: ghcr.io/mc-similian/spoolman:latest
+    container_name: spoolman
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - spoolman-data:/home/app/.local/share/spoolman
+    environment:
+      - TZ=Europe/Berlin
+      # - SPOOLMAN_DB_TYPE=sqlite  # Default
+
+volumes:
+  spoolman-data:
