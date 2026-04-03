@@ -357,7 +357,8 @@
     "home": {
         "home": "Home",
         "welcome": "Willkommen auf deiner Spoolman Instanz!",
-        "description": "Es sieht so aus, als hättest du noch keine Spulen hinzugefügt. Schau auf unsere <helpPageLink>Hilfeseite</helpPageLink>, falls du Hilfe beim Start benötigst."
+        "description": "Es sieht so aus, als hättest du noch keine Spulen hinzugefügt. Schau auf unsere <helpPageLink>Hilfeseite</helpPageLink>, falls du Hilfe beim Start benötigst.",
+        "top_filaments": "Top 10 Filamente nach Restgewicht"
     },
     "settings": {
         "header": "Einstellungen",

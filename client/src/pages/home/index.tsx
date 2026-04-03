@@ -7,8 +7,9 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { ReactNode } from "react";
 import { Trans } from "react-i18next";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import Logo from "../../icon.svg?react";
+import { IFilament } from "../filaments/model";
 import { ISpool } from "../spools/model";
 
 dayjs.extend(utc);
@@ -18,6 +19,7 @@ const { useToken } = theme;
 export const Home = () => {
   const { token } = useToken();
   const t = useTranslate();
+  const navigate = useNavigate();
 
   const spools = useList<ISpool>({
     resource: "spool",
@@ -30,6 +32,12 @@ export const Home = () => {
   const vendors = useList<ISpool>({
     resource: "vendor",
     pagination: { pageSize: 1 },
+  });
+
+  const topFilaments = useList<IFilament>({
+    resource: "filament",
+    pagination: { pageSize: 10, current: 1 },
+    sorters: [{ field: "total_remaining_weight", order: "desc" }],
   });
 
   const hasSpools = !spools.result || spools.result.data.length > 0;
@@ -106,6 +114,71 @@ export const Home = () => {
           icon={<UserOutlined />}
         />
       </Row>
+      {(() => {
+        const items = (topFilaments.result?.data ?? []).filter(
+          (f) => f.total_remaining_weight && f.total_remaining_weight > 0
+        );
+        const maxWeight = items.length > 0 ? Math.max(...items.map((f) => f.total_remaining_weight!)) : 1;
+
+        return (
+          items.length > 0 && (
+            <Card
+              style={{ marginTop: 24 }}
+              loading={topFilaments.query.isLoading}
+              title={t("home.top_filaments")}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {items.map((filament) => {
+                  const weight = filament.total_remaining_weight!;
+                  const pct = (weight / maxWeight) * 100;
+                  const color = filament.color_hex ? `#${filament.color_hex}` : token.colorPrimary;
+                  const label = filament.vendor?.name
+                    ? `${filament.vendor.name} - ${filament.name ?? ""}`
+                    : filament.name ?? `#${filament.id}`;
+
+                  return (
+                    <div
+                      key={filament.id}
+                      style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                      onClick={() => navigate(`/filament/show/${filament.id}`)}
+                    >
+                      <div
+                        style={{
+                          width: 140,
+                          flexShrink: 0,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          fontSize: token.fontSizeSM,
+                          textAlign: "right",
+                        }}
+                        title={label}
+                      >
+                        {label}
+                      </div>
+                      <div style={{ flex: 1, background: token.colorBgLayout, borderRadius: 4, height: 24 }}>
+                        <div
+                          style={{
+                            width: `${pct}%`,
+                            minWidth: 2,
+                            height: "100%",
+                            background: color,
+                            borderRadius: 4,
+                            transition: "width 0.3s ease",
+                          }}
+                        />
+                      </div>
+                      <div style={{ width: 60, flexShrink: 0, fontSize: token.fontSizeSM, textAlign: "right" }}>
+                        {Math.round(weight)} g
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )
+        );
+      })()}
       {!hasSpools && (
         <>
           <p style={{ marginTop: 32 }}>{t("home.welcome")}</p>
