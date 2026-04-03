@@ -115,7 +115,7 @@ export const Home = () => {
         />
       </Row>
       {(() => {
-        const items = (topFilaments.data?.data ?? []).filter(
+        const items = (topFilaments.result?.data ?? []).filter(
           (f) => f.total_remaining_weight && f.total_remaining_weight > 0
         );
         const maxWeight = items.length > 0 ? Math.max(...items.map((f) => f.total_remaining_weight!)) : 1;
@@ -124,7 +124,7 @@ export const Home = () => {
           items.length > 0 && (
             <Card
               style={{ marginTop: 24 }}
-              loading={topFilaments.isLoading}
+              loading={topFilaments.query.isLoading}
               title={t("home.top_filaments")}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
