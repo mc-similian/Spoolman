@@ -36,7 +36,7 @@ export const Home = () => {
 
   const topFilaments = useList<IFilament>({
     resource: "filament",
-    pagination: { pageSize: 10, current: 1 },
+    pagination: { pageSize: 10, currentPage: 1 },
     sorters: [{ field: "total_remaining_weight", order: "desc" }],
   });
 
